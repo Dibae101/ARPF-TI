@@ -16,8 +16,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project code
-COPY . .
+# Copy application code
+COPY . /app/
+
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Create directories for logs and static files if they don't exist within the container context
 # Note: Logs and db.sqlite3 are often better handled with volumes in production
@@ -34,7 +38,8 @@ EXPOSE 8000
 # Run migrations (Optional: Often better done as a separate step or entrypoint script)
 # RUN python manage.py migrate --noinput
 
-# Command to run the application using Gunicorn
-# Ensure Gunicorn is in requirements.txt
-# Use 0.0.0.0 to bind to all interfaces within the container
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "arpf_ti.wsgi:application"]
+# Set the entrypoint (optional if set in docker-compose.yml, but good for clarity)
+# ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Command to run when container starts (now handled by entrypoint.sh)
+# CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "arpf_ti.wsgi:application"]
