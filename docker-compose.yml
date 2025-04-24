@@ -7,7 +7,6 @@ services:
       dockerfile: Dockerfile
     container_name: arpf-ti-app
     volumes:
-      - db_data:/app/db.sqlite3 # Mount db.sqlite3 using a named volume
       - log_data:/app/logs      # Mount logs directory using a named volume
       # Optional: Mount media files if your app uses them
       # - media_data:/app/media
@@ -20,6 +19,5 @@ services:
     # command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "arpf_ti.wsgi:application"]
 
 volumes:
-  db_data: # Declare the named volume for the database
   log_data: # Declare the named volume for logs
   # media_data: # Declare the named volume for media if used

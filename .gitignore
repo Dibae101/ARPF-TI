@@ -70,7 +70,17 @@ htmlcov/
 /threat_intelligence/model_files/**/blobs/
 !/threat_intelligence/model_files/**/.gitkeep
 
-# Secret files
+# Local settings / secrets
+.env
+local_settings.py
 *.pem
 *.key
 secret_key.txt
+
+# Database file (Now included)
+# db.sqlite3
+# db.sqlite3-journal
+
+# Logs
+logs/
+*.log
