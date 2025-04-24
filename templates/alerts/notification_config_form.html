@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if config %}Edit{% else %}Add{% endif %} Notification Configuration - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'alerts:alert_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Alerts</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'alerts:notification_config_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Notification Configurations</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">{% if config %}Edit{% else %}Add{% endif %} Configuration</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">{% if config %}Edit{% else %}Add{% endif %} Notification Configuration</h1>
+        <p class="mt-1 text-sm text-gray-600">Configure how alerts are delivered to your team</p>
+    </div>
+    <a href="{% url 'alerts:notification_config_list' %}" class="btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i> Back to List
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Basic Info -->
+            <div>
+                <h2 class="text-lg font-semibold mb-4">Basic Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Configuration Name</label>
+                        <input type="text" name="name" id="name" required 
+                               value="{{ config.name|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="notification_type" class="block text-sm font-medium text-gray-700">Notification Type</label>
+                        <select name="notification_type" id="notification_type" required 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                onchange="toggleNotificationFields()">
+                            <option value="">Select a type</option>
+                            {% for value, label in notification_types %}
+                                <option value="{{ value }}" {% if config.notification_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="min_severity" class="block text-sm font-medium text-gray-700">Minimum Severity</label>
+                        <select name="min_severity" id="min_severity" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            {% for value, label in severity_levels %}
+                                <option value="{{ value }}" {% if config.min_severity == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Only alerts with this severity or higher will trigger notifications</p>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center h-5 mt-6">
+                            <input type="checkbox" name="is_active" id="is_active" 
+                                   {% if config.is_active %}checked{% endif %}
+                                   class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label for="is_active" class="ml-2 block text-sm text-gray-700">
+                                Active
+                            </label>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">Notifications will only be sent if this configuration is active</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Email Settings -->
+            <div id="email-fields" class="notification-fields pt-6 border-t border-gray-200" style="display: none;">
+                <h2 class="text-lg font-semibold mb-4">Email Settings</h2>
+                <div class="grid grid-cols-1 gap-y-4">
+                    <div>
+                        <label for="recipients" class="block text-sm font-medium text-gray-700">Recipients</label>
+                        <input type="text" name="recipients" id="recipients" 
+                               value="{{ config.recipients|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="email1@example.com, email2@example.com">
+                        <p class="mt-1 text-xs text-gray-500">Separate multiple email addresses with commas</p>
+                    </div>
+                    
+                    <div>
+                        <label for="email_subject_prefix" class="block text-sm font-medium text-gray-700">Subject Prefix</label>
+                        <input type="text" name="email_subject_prefix" id="email_subject_prefix" 
+                               value="{{ config.email_subject_prefix|default:'[ARPF-TI Alert]' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slack Settings -->
+            <div id="slack-fields" class="notification-fields pt-6 border-t border-gray-200" style="display: none;">
+                <h2 class="text-lg font-semibold mb-4">Slack Settings</h2>
+                <div class="grid grid-cols-1 gap-y-4">
+                    <div>
+                        <label for="webhook_url" class="block text-sm font-medium text-gray-700">Webhook URL</label>
+                        <input type="url" name="webhook_url" id="webhook_url" 
+                               value="{{ config.webhook_url|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="https://hooks.slack.com/services/...">
+                    </div>
+                    
+                    <div>
+                        <label for="channel" class="block text-sm font-medium text-gray-700">Channel</label>
+                        <input type="text" name="channel" id="channel" 
+                               value="{{ config.channel|default:'#security-alerts' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="#channel-name">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Webhook Settings -->
+            <div id="webhook-fields" class="notification-fields pt-6 border-t border-gray-200" style="display: none;">
+                <h2 class="text-lg font-semibold mb-4">Webhook Settings</h2>
+                <div class="grid grid-cols-1 gap-y-4">
+                    <div>
+                        <label for="webhook_url" class="block text-sm font-medium text-gray-700">Webhook URL</label>
+                        <input type="url" name="webhook_url" id="webhook_url" 
+                               value="{{ config.webhook_url|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="https://example.com/webhook">
+                    </div>
+                    
+                    <div>
+                        <label for="headers" class="block text-sm font-medium text-gray-700">Headers (JSON)</label>
+                        <textarea name="headers" id="headers" rows="3"
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                  placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'>{{ config.headers|default:'{}' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="flex justify-end pt-6 border-t border-gray-200">
+                <a href="{% url 'alerts:notification_config_list' %}" class="btn-secondary mr-3">Cancel</a>
+                <button type="submit" class="btn-primary">Save Configuration</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleNotificationFields() {
+        const type = document.getElementById('notification_type').value;
+        const fields = document.querySelectorAll('.notification-fields');
+        
+        // Hide all notification fields
+        fields.forEach(field => {
+            field.style.display = 'none';
+        });
+        
+        // Show the relevant fields based on the selected type
+        if (type === 'email') {
+            document.getElementById('email-fields').style.display = 'block';
+        } else if (type === 'slack') {
+            document.getElementById('slack-fields').style.display = 'block';
+        } else if (type === 'webhook') {
+            document.getElementById('webhook-fields').style.display = 'block';
+        }
+    }
+    
+    // Call the function on page load to set initial state
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleNotificationFields();
+    });
+</script>
+{% endblock %}

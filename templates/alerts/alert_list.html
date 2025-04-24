@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}Security Alerts - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">Security Alerts</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Security Alerts</h1>
+        <p class="mt-1 text-sm text-gray-600">Manage and respond to security events detected by ARPF-TI</p>
+    </div>
+    <a href="{% url 'alerts:notification_config_list' %}" class="btn-secondary">
+        <i class="fas fa-cog mr-2"></i> Notification Settings
+    </a>
+</div>
+
+<!-- Alert Filters -->
+<div class="bg-white p-4 rounded-lg shadow-md mb-6">
+    <div class="flex flex-wrap gap-4">
+        <div class="w-full md:w-auto flex-1">
+            <label for="alert-type" class="block text-sm font-medium text-gray-700 mb-1">Alert Type</label>
+            <select id="alert-type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                <option value="">All Types</option>
+                {% for type_code, type_name in alert_types %}
+                    <option value="{{ type_code }}" {% if type_filter == type_code %}selected{% endif %}>{{ type_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="w-full md:w-auto flex-1">
+            <label for="alert-severity" class="block text-sm font-medium text-gray-700 mb-1">Severity</label>
+            <select id="alert-severity" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                <option value="">All Severities</option>
+                {% for severity_code, severity_name in severity_levels %}
+                    <option value="{{ severity_code }}" {% if severity_filter == severity_code %}selected{% endif %}>{{ severity_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="w-full md:w-auto flex-1">
+            <label for="alert-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select id="alert-status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                <option value="">All Status</option>
+                <option value="0" {% if acknowledged_filter == '0' %}selected{% endif %}>Unacknowledged</option>
+                <option value="1" {% if acknowledged_filter == '1' %}selected{% endif %}>Acknowledged</option>
+            </select>
+        </div>
+        <div class="w-full md:w-auto flex-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1 opacity-0">Apply</label>
+            <button id="apply-filters" class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Apply Filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts Table -->
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Timestamp
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Title
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Severity
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Source IP
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for alert in alerts %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ alert.timestamp|date:"M d, Y H:i:s" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}" class="text-blue-600 hover:text-blue-900">
+                            {{ alert.title }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ alert.get_alert_type_display }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                            {% if alert.severity == 'critical' %}bg-red-100 text-red-800
+                            {% elif alert.severity == 'high' %}bg-orange-100 text-orange-800
+                            {% elif alert.severity == 'medium' %}bg-yellow-100 text-yellow-800
+                            {% elif alert.severity == 'low' %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ alert.get_severity_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ alert.source_ip|default:"-" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if alert.is_acknowledged %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Acknowledged
+                            </span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                Unacknowledged
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div class="flex space-x-2">
+                            <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}" class="text-gray-500 hover:text-gray-900" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if not alert.is_acknowledged %}
+                                <a href="{% url 'alerts:alert_acknowledge' alert_id=alert.id %}" class="text-blue-500 hover:text-blue-900" title="Acknowledge">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                        No alerts found. This is good news!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const applyFiltersButton = document.getElementById('apply-filters');
+        applyFiltersButton.addEventListener('click', function() {
+            const typeFilter = document.getElementById('alert-type').value;
+            const severityFilter = document.getElementById('alert-severity').value;
+            const statusFilter = document.getElementById('alert-status').value;
+            
+            let url = window.location.pathname + '?';
+            
+            if (typeFilter) {
+                url += 'type=' + typeFilter + '&';
+            }
+            
+            if (severityFilter) {
+                url += 'severity=' + severityFilter + '&';
+            }
+            
+            if (statusFilter) {
+                url += 'acknowledged=' + statusFilter + '&';
+            }
+            
+            // Remove trailing '&' or '?' if exists
+            url = url.replace(/[&?]$/, '');
+            
+            window.location.href = url;
+        });
+    });
+</script>
+{% endblock %}

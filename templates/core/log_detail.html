@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Log Detail - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'core:log_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Logs</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">Log #{{ log.id }}</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Log Detail #{{ log.id }}</h1>
+        <p class="mt-1 text-sm text-gray-600">Request log from {{ log.timestamp|date:"F j, Y H:i:s" }}</p>
+    </div>
+    <a href="{% url 'core:log_list' %}" class="btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i> Back to Logs
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-6">
+        <!-- Basic Info -->
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold mb-4">Request Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Timestamp</p>
+                    <p class="mt-1">{{ log.timestamp|date:"F j, Y H:i:s" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Source IP</p>
+                    <p class="mt-1">{{ log.source_ip }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Method</p>
+                    <p class="mt-1">{{ log.method }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Path</p>
+                    <p class="mt-1 font-mono">{{ log.path }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Status Code</p>
+                    <p class="mt-1">{{ log.status_code }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Response Time</p>
+                    <p class="mt-1">{{ log.response_time|floatformat:2 }} ms</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">User Agent</p>
+                    <p class="mt-1 text-sm font-mono break-all">{{ log.user_agent }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Status</p>
+                    {% if log.was_blocked %}
+                        <p class="mt-1">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                Blocked
+                            </span>
+                        </p>
+                    {% else %}
+                        <p class="mt-1">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Allowed
+                            </span>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Matched Rule (if any) -->
+        {% if log.matched_rule %}
+        <div class="mb-6 pt-6 border-t border-gray-200">
+            <h2 class="text-lg font-semibold mb-4">Matched Rule</h2>
+            <div class="bg-gray-50 p-4 rounded-md">
+                <div class="flex justify-between mb-2">
+                    <span class="font-medium">{{ log.matched_rule.name }}</span>
+                    <a href="{% url 'core:rule_detail' rule_id=log.matched_rule.id %}" class="text-blue-600 hover:text-blue-900 text-sm">
+                        View Rule
+                    </a>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <p class="text-gray-500">Type</p>
+                        <p>{{ log.matched_rule.get_rule_type_display }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Pattern</p>
+                        <p class="font-mono">{{ log.matched_rule.pattern }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Action</p>
+                        <p>{{ log.matched_rule.get_action_display }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Headers -->
+        <div class="mb-6 pt-6 border-t border-gray-200">
+            <h2 class="text-lg font-semibold mb-4">Request Headers</h2>
+            <div class="bg-gray-50 p-4 rounded-md overflow-x-auto">
+                <pre class="text-sm font-mono whitespace-pre-wrap">{{ log.headers }}</pre>
+            </div>
+        </div>
+
+        <!-- Request Body (if any) -->
+        {% if log.request_body %}
+        <div class="pt-6 border-t border-gray-200">
+            <h2 class="text-lg font-semibold mb-4">Request Body</h2>
+            <div class="bg-gray-50 p-4 rounded-md overflow-x-auto">
+                <pre class="text-sm font-mono whitespace-pre-wrap">{{ log.request_body }}</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

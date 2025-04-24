@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Detailed Metrics | ARPF-TI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <!-- Page Header -->
+    <header class="mb-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Detailed Metrics</h1>
+                <p class="text-gray-600">Advanced analytics and performance metrics</p>
+            </div>
+            <div>
+                <a href="{% url 'dashboard:index' %}" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Time Range Selector -->
+    <div class="mb-6 bg-white rounded-lg shadow p-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="font-semibold text-gray-700">Time Range:</div>
+            <div class="flex flex-wrap gap-2">
+                <a href="?range=hour" class="px-4 py-2 rounded-md {% if time_range == 'hour' %}bg-secondary-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %} transition-colors">
+                    Last Hour
+                </a>
+                <a href="?range=day" class="px-4 py-2 rounded-md {% if time_range == 'day' %}bg-secondary-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %} transition-colors">
+                    Last 24 Hours
+                </a>
+                <a href="?range=week" class="px-4 py-2 rounded-md {% if time_range == 'week' %}bg-secondary-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %} transition-colors">
+                    Last Week
+                </a>
+                <a href="?range=month" class="px-4 py-2 rounded-md {% if time_range == 'month' %}bg-secondary-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %} transition-colors">
+                    Last Month
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metric Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Traffic by Time Chart -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-700 mb-4">Traffic by Time</h3>
+            <div class="h-64 relative">
+                <canvas id="trafficTimeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Request Types Chart -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-700 mb-4">Request Methods</h3>
+            <div class="h-64 relative">
+                <canvas id="requestTypesChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Response Times Chart -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-700 mb-4">Response Times (ms)</h3>
+            <div class="h-64 relative">
+                <canvas id="responseTimesChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Status Codes Chart -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-700 mb-4">HTTP Status Codes</h3>
+            <div class="h-64 relative">
+                <canvas id="statusCodesChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Rule Effectiveness -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h3 class="font-semibold text-gray-700 mb-4">Rule Effectiveness</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="py-2 px-4 text-left text-gray-600">Rule</th>
+                        <th class="py-2 px-4 text-center text-gray-600">Matches</th>
+                        <th class="py-2 px-4 text-center text-gray-600">Blocks</th>
+                        <th class="py-2 px-4 text-center text-gray-600">False Positives</th>
+                        <th class="py-2 px-4 text-center text-gray-600">Effectiveness</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- This would be populated with actual data in a real implementation -->
+                    <tr class="border-b">
+                        <td class="py-2 px-4">
+                            <a href="#" class="text-secondary-600 hover:text-secondary-800">SQL Injection Detection</a>
+                        </td>
+                        <td class="py-2 px-4 text-center">152</td>
+                        <td class="py-2 px-4 text-center">128</td>
+                        <td class="py-2 px-4 text-center">5</td>
+                        <td class="py-2 px-4 text-center">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: 95%"></div>
+                            </div>
+                            <span class="text-sm">95%</span>
+                        </td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="py-2 px-4">
+                            <a href="#" class="text-secondary-600 hover:text-secondary-800">XSS Attack Detection</a>
+                        </td>
+                        <td class="py-2 px-4 text-center">87</td>
+                        <td class="py-2 px-4 text-center">74</td>
+                        <td class="py-2 px-4 text-center">8</td>
+                        <td class="py-2 px-4 text-center">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: 85%"></div>
+                            </div>
+                            <span class="text-sm">85%</span>
+                        </td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="py-2 px-4">
+                            <a href="#" class="text-secondary-600 hover:text-secondary-800">Rate Limiting</a>
+                        </td>
+                        <td class="py-2 px-4 text-center">203</td>
+                        <td class="py-2 px-4 text-center">203</td>
+                        <td class="py-2 px-4 text-center">0</td>
+                        <td class="py-2 px-4 text-center">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: 100%"></div>
+                            </div>
+                            <span class="text-sm">100%</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Geographic Distribution -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-gray-700">Geographic Distribution</h3>
+            <a href="{% url 'dashboard:geo_map' %}" class="text-secondary-600 hover:text-secondary-800 text-sm">
+                View Full Map <i class="fas fa-chevron-right ml-1"></i>
+            </a>
+        </div>
+        <div class="h-96 relative">
+            <div id="geoMap" class="w-full h-full"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Traffic Time Chart
+        const trafficTimeCtx = document.getElementById('trafficTimeChart').getContext('2d');
+        new Chart(trafficTimeCtx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+                datasets: [{
+                    label: 'Total Traffic',
+                    data: [65, 59, 80, 81, 56, 55, 40, 60, 70, 80, 90, 100],
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+        
+        // Request Types Chart
+        const requestTypesCtx = document.getElementById('requestTypesChart').getContext('2d');
+        new Chart(requestTypesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['GET', 'POST', 'PUT', 'DELETE', 'OTHER'],
+                datasets: [{
+                    data: [65, 20, 10, 5, 2],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(251, 191, 36, 0.7)',
+                        'rgba(239, 68, 68, 0.7)',
+                        'rgba(107, 114, 128, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+        
+        // Response Times Chart
+        const responseTimesCtx = document.getElementById('responseTimesChart').getContext('2d');
+        new Chart(responseTimesCtx, {
+            type: 'bar',
+            data: {
+                labels: ['<50ms', '50-100ms', '100-200ms', '200-500ms', '>500ms'],
+                datasets: [{
+                    label: 'Response Times',
+                    data: [250, 180, 120, 60, 20],
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+        
+        // Status Codes Chart
+        const statusCodesCtx = document.getElementById('statusCodesChart').getContext('2d');
+        new Chart(statusCodesCtx, {
+            type: 'pie',
+            data: {
+                labels: ['2xx Success', '3xx Redirect', '4xx Client Error', '5xx Server Error'],
+                datasets: [{
+                    data: [75, 10, 12, 3],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(251, 191, 36, 0.7)',
+                        'rgba(239, 68, 68, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+        
+        // This would be replaced with actual data visualization code for the map
+        // For example, using a library like Leaflet.js
+        const geoMapElement = document.getElementById('geoMap');
+        if (geoMapElement) {
+            geoMapElement.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-100 text-gray-500">Interactive map would be displayed here using actual data</div>';
+        }
+    });
+</script>
+{% endblock %}

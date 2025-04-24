@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'core:rule_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Firewall Rules</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">{{ title }}</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+        <p class="mt-1 text-sm text-gray-600">Configure rules to filter traffic through your reverse proxy</p>
+    </div>
+    <a href="{% url 'core:rule_list' %}" class="btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i> Back to Rules
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-red-700">
+                                {{ form.non_field_errors }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Basic Info -->
+            <div>
+                <h2 class="text-lg font-semibold mb-4">Rule Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">Rule Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.priority.id_for_label }}" class="block text-sm font-medium text-gray-700">Priority</label>
+                        {{ form.priority }}
+                        {% if form.priority.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.priority.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-xs text-gray-500">Lower numbers are evaluated first</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.rule_type.id_for_label }}" class="block text-sm font-medium text-gray-700">Rule Type</label>
+                        {{ form.rule_type }}
+                        {% if form.rule_type.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.rule_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.action.id_for_label }}" class="block text-sm font-medium text-gray-700">Action</label>
+                        {{ form.action }}
+                        {% if form.action.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.action.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label for="{{ form.pattern.id_for_label }}" class="block text-sm font-medium text-gray-700">Pattern</label>
+                        {{ form.pattern }}
+                        {% if form.pattern.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.pattern.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-xs text-gray-500" id="pattern-help">Pattern format depends on the rule type. For IP addresses, use CIDR notation; for paths, use glob patterns.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center h-5 mt-6">
+                            {{ form.is_active }}
+                            <label for="{{ form.is_active.id_for_label }}" class="ml-2 block text-sm text-gray-700">
+                                Active
+                            </label>
+                        </div>
+                        {% if form.is_active.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-xs text-gray-500">Only active rules are evaluated</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="flex justify-end pt-6 border-t border-gray-200">
+                <a href="{% url 'core:rule_list' %}" class="btn-secondary mr-3">Cancel</a>
+                <button type="submit" class="btn-primary">Save Rule</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Dynamic pattern help text based on rule type
+    document.addEventListener('DOMContentLoaded', function() {
+        const ruleTypeSelect = document.getElementById('{{ form.rule_type.id_for_label }}');
+        const patternHelp = document.getElementById('pattern-help');
+        
+        function updatePatternHelp() {
+            const ruleType = ruleTypeSelect.value;
+            
+            switch(ruleType) {
+                case 'ip':
+                    patternHelp.textContent = 'Enter a single IP address (e.g., 192.168.1.1) or CIDR notation (e.g., 192.168.1.0/24)';
+                    break;
+                case 'country':
+                    patternHelp.textContent = 'Enter a country code (e.g., US, RU, CN)';
+                    break;
+                case 'user_agent':
+                    patternHelp.textContent = 'Enter a string or regex to match against the User-Agent header';
+                    break;
+                case 'path':
+                    patternHelp.textContent = 'Enter a path pattern (e.g., /admin/*, *.php)';
+                    break;
+                case 'header':
+                    patternHelp.textContent = 'Enter a header:value pattern (e.g., Referer:example.com)';
+                    break;
+                case 'method':
+                    patternHelp.textContent = 'Enter HTTP methods to match (e.g., POST, PUT)';
+                    break;
+                case 'custom':
+                    patternHelp.textContent = 'Enter a custom pattern according to your rule logic';
+                    break;
+                default:
+                    patternHelp.textContent = 'Pattern format depends on the rule type selected above';
+            }
+        }
+        
+        // Update on initial load
+        updatePatternHelp();
+        
+        // Update when rule type changes
+        ruleTypeSelect.addEventListener('change', updatePatternHelp);
+    });
+</script>
+{% endblock %}

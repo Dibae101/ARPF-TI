@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Log Detail - {{ log.timestamp|date:"M d, Y H:i:s" }} - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                <a href="{% url 'core:log_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Request Logs</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">Log Detail</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Request Log Detail</h1>
+    <p class="mt-1 text-sm text-gray-600">Details for request received at {{ log.timestamp|date:"M d, Y H:i:s" }}</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Log Details Card -->
+    <div class="lg:col-span-2">
+        <div class="card mb-6">
+            <div class="card-header">
+                Request Information
+            </div>
+            <div class="card-body">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Timestamp</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ log.timestamp }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Source IP</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-mono">{{ log.source_ip }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Country</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if log.country %}
+                                <span title="{{ log.country }}">{{ log.country|country_flag }} {{ log.country }}</span>
+                            {% else %}
+                                <span class="text-gray-400">Unknown</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Method</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ log.method }}</dd>
+                    </div>
+                    <div class="md:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Path</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-mono break-all">{{ log.path }}</dd>
+                    </div>
+                    <div class="md:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Query String</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-mono break-all">{{ log.query_string|default:"(empty)" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">HTTP Version</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ log.http_version }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Response Code</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ log.response_code }}</dd>
+                    </div>
+                    <div class="md:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">User Agent</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ log.user_agent|default:"(not provided)" }}</dd>
+                    </div>
+                    <div class="md:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Referer</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ log.referer|default:"(not provided)" }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-6">
+            <div class="card-header">
+                Request Headers
+            </div>
+            <div class="card-body">
+                {% if log.headers %}
+                    <pre class="bg-gray-50 p-4 rounded text-sm overflow-x-auto"><code>{{ log.headers|format_headers }}</code></pre>
+                {% else %}
+                    <p class="text-gray-500">No headers recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                Request Body
+            </div>
+            <div class="card-body">
+                {% if log.body %}
+                    <pre class="bg-gray-50 p-4 rounded text-sm overflow-x-auto"><code>{{ log.body }}</code></pre>
+                {% else %}
+                    <p class="text-gray-500">No request body recorded or body was empty.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Details Card -->
+    <div class="lg:col-span-1">
+        <div class="card">
+            <div class="card-header">
+                Processing Details
+            </div>
+            <div class="card-body">
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Action Taken</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ log.get_action_taken_display }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Status</dt>
+                        <dd class="mt-1 text-sm">
+                            {% if log.was_blocked %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Blocked</span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Allowed</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Matched Rule</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if log.matched_rule %}
+                                <a href="{% url 'core:rule_detail' rule_id=log.matched_rule.id %}" class="text-blue-600 hover:text-blue-900">{{ log.matched_rule.name }}</a>
+                            {% else %}
+                                <span class="text-gray-400">No rule matched</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% if log.matched_rule %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Rule Action</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if log.matched_rule.action == 'block' %}
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                    Block
+                                </span>
+                            {% elif log.matched_rule.action == 'alert' %}
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Alert
+                                </span>
+                            {% else %}
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    {{ log.matched_rule.get_action_display }}
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

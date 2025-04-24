@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load ti_tags %}
+
+{% block title %}Threat Intelligence Dashboard - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">Threat Intelligence</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Threat Intelligence</h1>
+        <p class="mt-1 text-sm text-gray-600">Manage and analyze threat intelligence data sources</p>
+    </div>
+    <div class="flex space-x-3">
+        <a href="{% url 'threat_intelligence:source_add' %}" class="btn-primary">
+            <i class="fas fa-plus mr-2"></i> Add Source
+        </a>
+        <a href="{% url 'threat_intelligence:ai_models_list' %}" class="btn-secondary">
+            <i class="fas fa-brain mr-2"></i> AI Models
+        </a>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Total Intel Sources -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Intel Sources</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ sources_count }}</p>
+            </div>
+            <div class="p-3 bg-blue-100 rounded-full text-blue-600">
+                <i class="fas fa-database"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-xs text-gray-500">
+                {{ active_sources_count }} active, {{ sources_count|subtract:active_sources_count }} inactive
+            </p>
+        </div>
+    </div>
+
+    <!-- Total Entries -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Intel Entries</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ entries_count }}</p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-full text-green-600">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-xs text-gray-500">
+                {{ high_confidence_count }} high confidence entries
+            </p>
+        </div>
+    </div>
+
+    <!-- AI Models -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">AI Models</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ ai_models_count }}</p>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-full text-purple-600">
+                <i class="fas fa-brain"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-xs text-gray-500">
+                {{ active_models_count }} active models
+            </p>
+        </div>
+    </div>
+
+    <!-- Recent Updates -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Recent Updates</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ recent_updates_count }}</p>
+            </div>
+            <div class="p-3 bg-yellow-100 rounded-full text-yellow-600">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-xs text-gray-500">
+                Last 24 hours
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard Content -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Intelligence Sources -->
+    <div class="lg:col-span-2">
+        <div class="card">
+            <div class="card-header flex justify-between items-center">
+                <span>Threat Intelligence Sources</span>
+                <a href="{% url 'threat_intelligence:sources_list' %}" class="text-sm text-blue-600 hover:text-blue-800">View all</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="overflow-x-auto">
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            document.querySelectorAll('.bg-blue-600[data-confidence]').forEach(function (element) {
+                                const confidence = element.getAttribute('data-confidence');
+                                element.style.width = confidence + '%';
+                            });
+                        });
+                    </script>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entries</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for source in recent_sources %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <a href="{% url 'threat_intelligence:source_detail' source_id=source.id %}" class="text-blue-600 hover:text-blue-900">
+                                            {{ source.name }}
+                                        </a>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ source.get_source_type_display }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {% if source.is_active %}
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                Active
+                                            </span>
+                                        {% else %}
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                Inactive
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ source.last_updated|default:"Never" }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ source.entries_count }}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                        No threat intelligence sources found. <a href="{% url 'threat_intelligence:source_add' %}" class="text-blue-600 hover:text-blue-900">Add your first source</a>.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entry Types Distribution -->
+    <div class="lg:col-span-1">
+        <div class="card mb-6">
+            <div class="card-header">
+                Entry Types Distribution
+            </div>
+            <div class="card-body">
+                <div class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                    <!-- Placeholder for chart - will be replaced with actual chart in production -->
+                    <p class="text-gray-400">Distribution chart will be displayed here</p>
+                </div>
+                <div class="mt-4">
+                    <ul class="space-y-2">
+                        {% for entry_type in entry_types_summary %}
+                            <li class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">{{ entry_type.display_name }}</span>
+                                <div class="flex items-center">
+                                    <span class="text-sm font-medium text-gray-900 mr-2">{{ entry_type.count }}</span>
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {% if entry_type.type == 'ip' %}bg-blue-100 text-blue-800{% elif entry_type.type == 'domain' %}bg-green-100 text-green-800{% elif entry_type.type == 'url' %}bg-purple-100 text-purple-800{% elif entry_type.type == 'file_hash' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ entry_type.percentage }}%
+                                    </span>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Entries -->
+<div class="card">
+    <div class="card-header flex justify-between items-center">
+        <span>Recent Threat Intelligence Entries</span>
+        <a href="{% url 'threat_intelligence:entries_list' %}" class="text-sm text-blue-600 hover:text-blue-800">View all</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Seen</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for entry in recent_entries %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <a href="{% url 'threat_intelligence:entry_detail' entry_id=entry.id %}" class="text-blue-600 hover:text-blue-900 font-mono">
+                                    {{ entry.value }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ entry.get_entry_type_display }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ entry.source.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <div class="w-24 bg-gray-200 rounded-full h-2.5">
+                                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ entry.confidence_score|default:"0" }}%;"></div>
+                                </div>
+                                <span class="text-xs ml-1">{{ entry.confidence_score }}%</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                    {% if entry.category == 'malware' %}bg-red-100 text-red-800
+                                    {% elif entry.category == 'phishing' %}bg-orange-100 text-orange-800
+                                    {% elif entry.category == 'botnet' %}bg-yellow-100 text-yellow-800
+                                    {% elif entry.category == 'ransomware' %}bg-purple-100 text-purple-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ entry.category }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ entry.first_seen|date:"M d, Y" }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                No threat intelligence entries found. Add a source to start collecting data.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

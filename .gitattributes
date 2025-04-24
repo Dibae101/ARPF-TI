@@ -1,0 +1,27 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.py text
+*.js text
+*.html text
+*.css text
+*.md text
+*.yml text
+*.yaml text
+*.json text
+*.sh text eol=lf
+
+# Django template files
+*.html text
+
+# Mark binary files explicitly
+*.pkl binary
+*.db binary
+*.sqlite3 binary
+threat_intelligence/model_files/**/*.pkl filter=lfs diff=lfs merge=lfs -text
+threat_intelligence/model_files/**/blobs/* filter=lfs diff=lfs merge=lfs -text
+
+# Exclude paths for linguist (GitHub language statistics)
+staticfiles/* linguist-vendored
+templates/*/vendor/* linguist-vendored

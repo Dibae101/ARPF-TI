@@ -1,0 +1,29 @@
+Django>=4.2.0
+requests>=2.28.0
+apscheduler>=3.10.0
+PyYAML>=6.0
+python-dotenv>=1.0.0
+ipaddress>=1.0.23
+geoip2>=4.7.0
+pandas>=2.0.0
+scikit-learn>=1.2.0
+matplotlib>=3.7.0
+plotly>=5.14.0
+django-crispy-forms>=2.0
+whitenoise>=6.4.0
+gunicorn>=21.0.0
+# Llama model dependencies
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.1.99
+accelerate>=0.20.0
+bitsandbytes>=0.40.0  # For 4-bit quantization
+safetensors>=0.3.1
+# TAXII/STIX dependencies
+taxii2-client>=2.3.0
+stix2>=3.0.1
+# MISP dependencies
+pymisp>=2.4.170
+# Enhanced API support
+pydantic>=2.0.0
+validators>=0.20.0

@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if source %}Edit{% else %}Add{% endif %} Threat Intelligence Source - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'threat_intelligence:index' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Threat Intelligence</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'threat_intelligence:sources_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Sources</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">{% if source %}Edit{% else %}Add{% endif %} Source</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">{% if source %}Edit{% else %}Add{% endif %} Threat Intelligence Source</h1>
+        <p class="mt-1 text-sm text-gray-600">Configure a source to collect threat intelligence data</p>
+    </div>
+    <a href="{% url 'threat_intelligence:sources_list' %}" class="btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i> Back to Sources
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Basic Info -->
+            <div>
+                <h2 class="text-lg font-semibold mb-4">Source Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Source Name</label>
+                        <input type="text" name="name" id="name" required 
+                               value="{{ source.name|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="source_type" class="block text-sm font-medium text-gray-700">Source Type</label>
+                        <select name="source_type" id="source_type" required 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            <option value="">Select a type</option>
+                            {% for value, label in source_types %}
+                                <option value="{{ value }}" {% if source.source_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea name="description" id="description" rows="3"
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">{{ source.description|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Connection Settings -->
+            <div class="pt-6 border-t border-gray-200">
+                <h2 class="text-lg font-semibold mb-4">Connection Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div class="md:col-span-2">
+                        <label for="url" class="block text-sm font-medium text-gray-700">URL</label>
+                        <input type="url" name="url" id="url" required 
+                               value="{{ source.url|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="https://example.com/api/threats">
+                        <p class="mt-1 text-xs text-gray-500">The URL from which to fetch threat intelligence data</p>
+                    </div>
+                    
+                    <div>
+                        <label for="api_key" class="block text-sm font-medium text-gray-700">API Key</label>
+                        <input type="text" name="api_key" id="api_key" 
+                               value="{{ source.api_key|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="Leave blank if not required">
+                    </div>
+                    
+                    <div>
+                        <label for="update_frequency" class="block text-sm font-medium text-gray-700">Update Frequency (seconds)</label>
+                        <input type="number" name="update_frequency" id="update_frequency" 
+                               value="{{ source.update_frequency|default:'86400' }}"
+                               min="300" step="300"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                        <p class="mt-1 text-xs text-gray-500">Minimum: 300 seconds (5 minutes)</p>
+                    </div>
+                    
+                    {% if source %}
+                    <div>
+                        <div class="flex items-center h-5 mt-6">
+                            <input type="checkbox" name="is_active" id="is_active" 
+                                   {% if source.is_active %}checked{% endif %}
+                                   class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label for="is_active" class="ml-2 block text-sm text-gray-700">
+                                Active
+                            </label>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">Inactive sources will not be automatically updated</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="flex justify-end pt-6 border-t border-gray-200">
+                <a href="{% url 'threat_intelligence:sources_list' %}" class="btn-secondary mr-3">Cancel</a>
+                <button type="submit" class="btn-primary">Save Source</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

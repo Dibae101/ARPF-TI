@@ -1,0 +1,22 @@
+# Development dependencies for ARPF-TI
+
+# Testing
+pytest
+pytest-django
+pytest-cov
+coverage
+
+# Linting & Formatting
+flake8
+black
+isort
+
+# Debugging
+django-debug-toolbar
+
+# Documentation (Optional)
+sphinx
+sphinx-rtd-theme
+
+# Pre-commit hooks
+pre-commit

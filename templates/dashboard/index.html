@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load dashboard_tags %}
+
+{% block title %}Dashboard - ARPF-TI{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p class="mt-1 text-sm text-gray-600">System overview and analytics</p>
+    </div>
+    <div>
+        <button id="refresh-dashboard" class="btn-secondary">
+            <i class="fas fa-sync-alt mr-2"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Total Requests -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Total Requests</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_requests }}</p>
+            </div>
+            <div class="p-3 bg-blue-100 rounded-full text-blue-600">
+                <i class="fas fa-globe"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <div class="flex items-center">
+                {% if request_change_pct > 0 %}
+                    <i class="fas fa-arrow-up text-green-500 mr-1"></i>
+                    <span class="text-green-500 text-xs font-medium">{{ request_change_pct }}%</span>
+                {% elif request_change_pct < 0 %}
+                    <i class="fas fa-arrow-down text-red-500 mr-1"></i>
+                    <span class="text-red-500 text-xs font-medium">{{ request_change_pct|abs_value }}%</span>
+                {% else %}
+                    <i class="fas fa-minus text-gray-500 mr-1"></i>
+                    <span class="text-gray-500 text-xs font-medium">0%</span>
+                {% endif %}
+                <span class="text-xs text-gray-500 ml-1">vs previous period</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blocked Requests -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Blocked Requests</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ blocked_requests }}</p>
+            </div>
+            <div class="p-3 bg-red-100 rounded-full text-red-600">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <div class="flex items-center">
+                <span class="text-xs text-gray-500">Block rate: {{ block_rate }}%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Rules -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Active Rules</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ active_rules }}</p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-full text-green-600">
+                <i class="fas fa-list-check"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-xs text-gray-500">
+                {{ rule_trigger_count }} rule triggers today
+            </p>
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Recent Alerts</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ recent_alerts }}</p>
+            </div>
+            <div class="p-3 bg-yellow-100 rounded-full text-yellow-600">
+                <i class="fas fa-bell"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <a href="{% url 'alerts:alert_list' %}" class="text-xs text-blue-600 hover:text-blue-800">
+                View all alerts
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Traffic Chart - Full Width -->
+<div class="card mb-6">
+    <div class="card-header flex justify-between items-center">
+        <span>Traffic Overview</span>
+        <div class="flex space-x-2">
+            <button class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 time-filter" data-period="day">Day</button>
+            <button class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-800 time-filter" data-period="week">Week</button>
+            <button class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-800 time-filter" data-period="month">Month</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <canvas id="trafficChart" class="w-full h-64"></canvas>
+    </div>
+</div>
+
+<!-- Request Logs - Full Width -->
+<div class="card mb-6">
+    <div class="card-header flex justify-between items-center">
+        <span>Request Logs</span>
+        <a href="{% url 'core:log_list' %}" class="text-xs text-blue-600 hover:text-blue-800">View all</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for log in recent_logs %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <a href="{% url 'core:log_detail' log_id=log.id %}" class="text-blue-600 hover:text-blue-900">
+                                <div class="text-sm">{{ log.timestamp|date:"H:i:s" }}</div>
+                                <div class="text-xs text-gray-500">{{ log.timestamp|date:"M d, Y" }}</div>
+                            </a>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-mono">{{ log.source_ip }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ log.method }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate" title="{{ log.path }}">{{ log.path }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if log.was_blocked %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                {% if log.was_blocked %}Blocked{% else %}Allowed{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-3 text-sm text-gray-500 text-center">No logs found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Three Column Section for smaller widgets -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Top Source Countries -->
+    <div class="card">
+        <div class="card-header">
+            Top Source Countries
+        </div>
+        <div class="card-body p-0">
+            <ul class="divide-y divide-gray-200">
+                {% for country in top_countries %}
+                <li class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="text-lg mr-3">{{ country.flag }}</span>
+                            <span class="text-sm font-medium text-gray-900">{{ country.name }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-500 mr-3">{{ country.request_count }}</span>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">{{ country.percentage }}%</span>
+                        </div>
+                    </div>
+                </li>
+                {% empty %}
+                <li class="px-6 py-4 text-center text-gray-500">
+                    No country data available
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Active Rules List -->
+    <div class="card">
+        <div class="card-header flex justify-between items-center">
+            <span>Active Rules</span>
+            <a href="{% url 'core:rule_list' %}" class="text-xs text-blue-600 hover:text-blue-800">View all</a>
+        </div>
+        <div class="card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for rule in active_rules_list %}
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ rule.name }}</div>
+                                <div class="text-xs text-gray-500">{{ rule.description|truncatechars:30 }}</div>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    {% if rule.priority >= 80 %}bg-red-100 text-red-800
+                                    {% elif rule.priority >= 50 %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ rule.priority }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="px-4 py-3 text-sm text-gray-500 text-center">No active rules found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="card">
+        <div class="card-header flex justify-between items-center">
+            <span>Recent Alerts</span>
+            <a href="{% url 'alerts:alert_list' %}" class="text-xs text-blue-600 hover:text-blue-800">View all</a>
+        </div>
+        <div class="card-body p-0">
+            <ul class="divide-y divide-gray-200">
+                {% for alert in recent_alert_list %}
+                <li class="px-6 py-4 hover:bg-gray-50">
+                    <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}" class="block">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 mt-1">
+                                {% if alert.severity == 'critical' %}
+                                    <span class="h-3 w-3 rounded-full bg-red-500 inline-block"></span>
+                                {% elif alert.severity == 'high' %}
+                                    <span class="h-3 w-3 rounded-full bg-orange-500 inline-block"></span>
+                                {% elif alert.severity == 'medium' %}
+                                    <span class="h-3 w-3 rounded-full bg-yellow-500 inline-block"></span>
+                                {% else %}
+                                    <span class="h-3 w-3 rounded-full bg-blue-500 inline-block"></span>
+                                {% endif %}
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p class="text-sm font-medium text-gray-900">{{ alert.title }}</p>
+                                <p class="text-xs text-gray-500 mt-1">{{ alert.timestamp|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+                {% empty %}
+                <li class="px-6 py-4 text-center text-gray-500">
+                    No recent alerts
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('trafficChart').getContext('2d');
+        let trafficChart;
+        let refreshInterval;
+        const refreshIntervalTime = {{ settings.refresh_interval|default:"30" }} * 1000; // Convert to milliseconds
+        let currentPeriod = '{{ time_range }}';
+        
+        // Initial chart data from server
+        const initialLabels = {{ chart_data.labels|safe }};
+        const initialAllRequests = {{ chart_data.all_requests|safe }};
+        const initialBlockedRequests = {{ chart_data.blocked_requests|safe }};
+        
+        // Initialize the chart with real data
+        initChart(initialLabels, initialAllRequests, initialBlockedRequests);
+        
+        // Set up auto-refresh
+        startAutoRefresh();
+        
+        // Function to initialize the chart
+        function initChart(labels, allRequestsData, blockedRequestsData) {
+            const chartData = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'All Requests',
+                        data: allRequestsData,
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Blocked Requests',
+                        data: blockedRequestsData,
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            };
+            
+            // Create chart with error handling
+            try {
+                // Destroy existing chart if it exists
+                if (trafficChart) {
+                    trafficChart.destroy();
+                }
+                
+                trafficChart = new Chart(ctx, {
+                    type: 'line',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        animation: {
+                            duration: 1000
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Error initializing chart:', e);
+                document.getElementById('trafficChart').insertAdjacentHTML('afterend', 
+                    '<div class="text-center text-red-500 py-4">Unable to load chart. Please try refreshing the page.</div>');
+            }
+        }
+        
+        // Function to fetch updated data from the server
+        function fetchTrafficData() {
+            fetch(`{% url 'dashboard:traffic_data_api' %}?range=${currentPeriod}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update the chart with the new data
+                    trafficChart.data.labels = data.labels;
+                    trafficChart.data.datasets[0].data = data.all_requests;
+                    trafficChart.data.datasets[1].data = data.blocked_requests;
+                    trafficChart.update();
+                    
+                    // Update the dashboard stats
+                    updateDashboardStats();
+                })
+                .catch(error => console.error('Error fetching traffic data:', error));
+        }
+        
+        // Function to update basic stats on the dashboard
+        function updateDashboardStats() {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Update the total requests
+                    const totalRequests = doc.querySelector('.bg-white p-6 rounded-lg shadow-md:nth-child(1) .text-2xl');
+                    if (totalRequests) {
+                        document.querySelector('.bg-white p-6 rounded-lg shadow-md:nth-child(1) .text-2xl').textContent = 
+                            totalRequests.textContent;
+                    }
+                    
+                    // Update blocked requests
+                    const blockedRequests = doc.querySelector('.bg-white p-6 rounded-lg shadow-md:nth-child(2) .text-2xl');
+                    if (blockedRequests) {
+                        document.querySelector('.bg-white p-6 rounded-lg shadow-md:nth-child(2) .text-2xl').textContent = 
+                            blockedRequests.textContent;
+                    }
+                    
+                    // Update recent logs table
+                    const recentLogsTable = doc.querySelector('.card:has(.card-header:contains("Request Logs")) tbody');
+                    if (recentLogsTable) {
+                        document.querySelector('.card:has(.card-header:contains("Request Logs")) tbody').innerHTML = 
+                            recentLogsTable.innerHTML;
+                    }
+                })
+                .catch(error => console.error('Error updating dashboard stats:', error));
+        }
+        
+        // Function to start the auto-refresh
+        function startAutoRefresh() {
+            // Clear any existing interval
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            // Set up the new interval
+            refreshInterval = setInterval(fetchTrafficData, refreshIntervalTime);
+        }
+        
+        // Handle time filter buttons
+        document.querySelectorAll('.time-filter').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.time-filter').forEach(btn => {
+                    btn.classList.remove('bg-blue-100', 'text-blue-800');
+                    btn.classList.add('bg-gray-100', 'text-gray-800');
+                });
+                
+                // Add active class to clicked button
+                this.classList.remove('bg-gray-100', 'text-gray-800');
+                this.classList.add('bg-blue-100', 'text-blue-800');
+                
+                // Update the current period
+                currentPeriod = this.dataset.period;
+                
+                // Fetch new data for the selected period
+                fetch(`{% url 'dashboard:traffic_data_api' %}?range=${currentPeriod}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update the chart with the new data
+                        trafficChart.data.labels = data.labels;
+                        trafficChart.data.datasets[0].data = data.all_requests;
+                        trafficChart.data.datasets[1].data = data.blocked_requests;
+                        trafficChart.update();
+                    })
+                    .catch(error => console.error('Error fetching traffic data:', error));
+            });
+        });
+        
+        // Refresh dashboard button
+        document.getElementById('refresh-dashboard').addEventListener('click', function() {
+            // Show loading indicator
+            this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Refreshing...';
+            this.disabled = true;
+            
+            // Fetch fresh data
+            fetchTrafficData();
+            
+            // Reset button after a short delay
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Refresh';
+                this.disabled = false;
+            }, 1000);
+        });
+    });
+</script>
+{% endblock %}

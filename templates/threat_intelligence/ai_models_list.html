@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Classifier Models - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'threat_intelligence:index' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Threat Intelligence</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">AI Models</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">AI Classifier Models</h1>
+        <p class="mt-1 text-sm text-gray-600">Manage machine learning models for threat classification</p>
+    </div>
+    <a href="{% url 'threat_intelligence:ai_model_add' %}" class="btn-primary">
+        <i class="fas fa-plus mr-2"></i> Add Model
+    </a>
+</div>
+
+<!-- AI Models Table -->
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        File Path
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for model in models %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <a href="{% url 'threat_intelligence:ai_model_edit' model_id=model.id %}" class="text-blue-600 hover:text-blue-900">
+                            {{ model.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ model.get_model_type_display }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate font-mono">
+                        {{ model.file_path }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ model.created_at|date:"M d, Y" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if model.is_active %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
+                            </span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                Inactive
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div class="flex space-x-2">
+                            <a href="{% url 'threat_intelligence:ai_model_edit' model_id=model.id %}" class="text-blue-500 hover:text-blue-900" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'threat_intelligence:ai_model_delete' model_id=model.id %}" class="text-red-500 hover:text-red-900" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                        No AI models found. <a href="{% url 'threat_intelligence:ai_model_add' %}" class="text-blue-600 hover:text-blue-900">Add your first model</a>.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- About AI Models Section -->
+<div class="mt-8 bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">About AI Classifier Models</h2>
+        <p class="text-gray-600 mb-4">
+            AI classifier models help automatically analyze and categorize threat intelligence data. 
+            These models can identify patterns, predict threat severity, and provide additional context to your data.
+        </p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h3 class="font-medium text-gray-900 mb-2">Supported Model Types</h3>
+                <ul class="list-disc list-inside text-gray-600 space-y-1">
+                    <li>Scikit-learn pickled models</li>
+                    <li>TensorFlow/Keras saved models</li>
+                    <li>ONNX format models</li>
+                    <li>Custom Python modules</li>
+                </ul>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h3 class="font-medium text-gray-900 mb-2">Common Use Cases</h3>
+                <ul class="list-disc list-inside text-gray-600 space-y-1">
+                    <li>Malware classification</li>
+                    <li>Threat actor identification</li>
+                    <li>Domain reputation scoring</li>
+                    <li>Phishing URL detection</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
