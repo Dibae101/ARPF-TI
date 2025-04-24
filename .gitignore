@@ -77,9 +77,9 @@ local_settings.py
 *.key
 secret_key.txt
 
-# Database file (Now included)
-# db.sqlite3
-# db.sqlite3-journal
+# Database file (Now ignored again)
+db.sqlite3
+db.sqlite3-journal
 
 # Logs
 logs/

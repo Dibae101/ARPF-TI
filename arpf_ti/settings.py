@@ -71,13 +71,13 @@ WSGI_APPLICATION = 'arpf_ti.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Revert to default path as DB is now part of the image
-# DB_PATH = os.environ.get('DJANGO_DB_PATH', BASE_DIR / 'db.sqlite3')
+# Restore logic to use DJANGO_DB_PATH from environment if set (for Docker volume), else default
+DB_PATH = os.environ.get('DJANGO_DB_PATH', BASE_DIR / 'db.sqlite3')
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3', # Use default path
+        'NAME': DB_PATH,
     }
 }
 
