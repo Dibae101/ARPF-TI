@@ -17,11 +17,14 @@ class RequestLoggerMiddleware(MiddlewareMixin):
     """
     
     def __init__(self, get_response=None):
+        super().__init__(get_response)  # Call parent's __init__ to properly initialize MiddlewareMixin
         self.get_response = get_response
         self.active_rules = None
         self.last_rules_check = 0
         self.rules_cache_ttl = 60  # Cache rules for 60 seconds
         self._load_rules()
+        # Add this attribute for Django compatibility
+        self.async_mode = False
     
     def _load_rules(self):
         """Load active rules from the database."""
@@ -222,11 +225,14 @@ class ReverseProxyMiddleware(MiddlewareMixin):
     Middleware for proxying requests to backend servers.
     """
     def __init__(self, get_response=None):
+        super().__init__(get_response)  # Call parent's __init__
         self.get_response = get_response
         self.proxy_configs = {}
         self.last_config_check = 0
         self.config_cache_ttl = 60  # Cache configs for 60 seconds
         self._load_proxy_configs()
+        # Add this attribute for Django compatibility
+        self.async_mode = False
     
     def _load_proxy_configs(self):
         """Load active proxy configurations from the database."""

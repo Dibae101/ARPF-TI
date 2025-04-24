@@ -16,10 +16,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code FIRST
 COPY . /app/
 
-# Copy entrypoint script and make it executable
+# Copy entrypoint script AFTER main code copy and make it executable
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
