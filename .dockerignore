@@ -1,0 +1,55 @@
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Docker files
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Python virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local settings / secrets
+.env
+local_settings.py
+*.pem
+*.key
+secret_key.txt
+
+# Database file (usually mounted as a volume, not copied)
+db.sqlite3
+db.sqlite3-journal
+
+# Logs
+logs/
+*.log
+
+# Static files collected by Django (will be collected in the image)
+/static/
+
+# Media files (usually mounted as a volume)
+/media/
+
+# Test reports
+.coverage
+htmlcov/

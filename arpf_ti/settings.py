@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import ast # Add this import
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,12 +9,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-generated-key-replace-in-production'
+# Load SECRET_KEY from environment variable
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-fallback-key-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Load DEBUG from environment variable, default to False
+DEBUG = ast.literal_eval(os.environ.get('DJANGO_DEBUG', 'False'))
 
-ALLOWED_HOSTS = []
+# Load ALLOWED_HOSTS from environment variable (comma-separated string)
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 
@@ -119,12 +123,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email configuration for alerts
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('SMTP_SERVER', 'smtp.example.com')
+EMAIL_HOST = os.environ.get('SMTP_SERVER') # Remove default
 EMAIL_PORT = int(os.environ.get('SMTP_PORT', 587))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('SMTP_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_USE_TLS = ast.literal_eval(os.environ.get('SMTP_USE_TLS', 'True')) # Convert to bool
+EMAIL_HOST_USER = os.environ.get('SMTP_USER') # Remove default
+EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD') # Remove default
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER) # Use user if not set
 
 # Logging configuration
 LOGGING = {
@@ -173,10 +177,10 @@ ENABLE_AI_CLASSIFIER = True
 ENABLE_DASHBOARD = True
 
 # Slack webhook for alerts (optional)
-SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL', '')
+SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL') # Remove default
 
 # API keys for threat intelligence sources
-API_KEY = os.environ.get('API_KEY', '')
+API_KEY = os.environ.get('API_KEY') # Remove default
 
 # Rules file path
 RULES_FILE_PATH = os.path.join(BASE_DIR, 'config', 'rules.yaml')

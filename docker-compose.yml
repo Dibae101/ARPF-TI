@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arpf-ti-app
+    volumes:
+      - db_data:/app/db.sqlite3 # Mount db.sqlite3 using a named volume
+      - log_data:/app/logs      # Mount logs directory using a named volume
+      # Optional: Mount media files if your app uses them
+      # - media_data:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env # Load environment variables from .env file
+    # The command is already defined in the Dockerfile CMD,
+    # but you could override it here if needed:
+    # command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "arpf_ti.wsgi:application"]
+
+volumes:
+  db_data: # Declare the named volume for the database
+  log_data: # Declare the named volume for logs
+  # media_data: # Declare the named volume for media if used
