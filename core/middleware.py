@@ -2,6 +2,7 @@ import json
 import time
 import logging
 import re
+import socket
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
@@ -23,8 +24,42 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         self.last_rules_check = 0
         self.rules_cache_ttl = 60  # Cache rules for 60 seconds
         self._load_rules()
+        # Get excluded IPs from settings
+        self.excluded_ips = set(getattr(settings, 'EXCLUDED_IPS', []))
+        # Always add 64.130.127.37 to the excluded IPs
+        self.excluded_ips.add('64.130.127.37')
+        # Auto-detect host IPs if enabled
+        if getattr(settings, 'EXCLUDE_HOST_IPS', True):
+            self.excluded_ips.update(self._get_host_ips())
+        logger.info(f"Excluded IPs from logging: {', '.join(self.excluded_ips)}")
         # Add this attribute for Django compatibility
         self.async_mode = False # Ensure this is correctly indented
+    
+    def _get_host_ips(self):
+        """Detect all IP addresses of the host machine."""
+        host_ips = set(['localhost', '127.0.0.1', '::1'])
+        
+        # Try to get the hostname and resolve it
+        try:
+            hostname = socket.gethostname()
+            host_ips.add(hostname)
+            # Get IPs from hostname
+            try:
+                host_ip = socket.gethostbyname(hostname)
+                host_ips.add(host_ip)
+            except socket.gaierror:
+                pass
+            
+            # Try to get all addresses from hostname
+            try:
+                for addrinfo in socket.getaddrinfo(hostname, None):
+                    host_ips.add(addrinfo[4][0])
+            except socket.gaierror:
+                pass
+        except Exception as e:
+            logger.warning(f"Error getting host IPs: {e}")
+        
+        return host_ips
     
     def _load_rules(self):
         """Load active rules from the database."""
@@ -40,6 +75,12 @@ class RequestLoggerMiddleware(MiddlewareMixin):
             ip = x_forwarded_for.split(',')[0].strip()
         else:
             ip = request.META.get('REMOTE_ADDR', '')
+        
+        # Check if this IP should be excluded from logging
+        request._excluded_from_logging = ip in self.excluded_ips
+        if request._excluded_from_logging:
+            logger.debug(f"Request from excluded IP: {ip}")
+        
         return ip
     
     def _check_rule_match(self, rule, request, ip_address):
@@ -113,6 +154,16 @@ class RequestLoggerMiddleware(MiddlewareMixin):
     
     def _create_log_entry(self, request, ip_address, matched_rule, action_taken, start_time, response=None):
         """Create a log entry for the request."""
+        # Explicit check for the problematic IP
+        if ip_address == '64.130.127.37':
+            logger.info(f"Explicitly blocking log entry for IP: {ip_address}")
+            return None
+            
+        # Skip logging for excluded IPs
+        if hasattr(request, '_excluded_from_logging') and request._excluded_from_logging:
+            logger.debug(f"Skipping log entry creation for excluded IP: {ip_address}")
+            return None
+            
         headers = {}
         for key, value in request.META.items():
             if key.startswith('HTTP_'):
@@ -162,10 +213,18 @@ class RequestLoggerMiddleware(MiddlewareMixin):
     def process_request(self, request):
         """Process the incoming request and apply firewall rules."""
         start_time = time.time()
+        request._request_start_time = start_time
         self._load_rules()
         
         ip_address = self._get_client_ip(request)
+        
+        # Skip rule evaluation for excluded IPs
+        if hasattr(request, '_excluded_from_logging') and request._excluded_from_logging:
+            logger.debug(f"Skipping rule evaluation for excluded IP: {ip_address}")
+            return None
+        
         matched_rule = self._evaluate_rules(request, ip_address)
+        request._matched_rule = matched_rule
         
         if matched_rule:
             if matched_rule.action == 'block':
@@ -177,12 +236,15 @@ class RequestLoggerMiddleware(MiddlewareMixin):
                 # Create alert if configured
                 self._create_alert_if_needed(log_entry, matched_rule)
                 
+                # Mark as already logged
+                request._request_already_logged = True
+                
                 # Return block response
                 return self._create_block_response(matched_rule)
             
             elif matched_rule.action == 'alert':
                 # Allow request but create an alert
-                self._create_log_entry(
+                log_entry = self._create_log_entry(
                     request, ip_address, matched_rule, 'alert', start_time
                 )
                 # Alert will be created after response in process_response
@@ -195,9 +257,13 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         """Process the response before it's sent back to the client."""
         ip_address = self._get_client_ip(request)
         
+        # Skip logging for excluded IPs
+        if hasattr(request, '_excluded_from_logging') and request._excluded_from_logging:
+            return response
+        
         # Check if this was already logged in process_request (for blocked requests)
         # If not, log it now
-        if not hasattr(request, '_request_already_logged'):
+        if not getattr(request, '_request_already_logged', False):
             matched_rule = getattr(request, '_matched_rule', None)
             action = 'allow'  # Default action for requests that don't match any rule
             
@@ -215,6 +281,10 @@ class RequestLoggerMiddleware(MiddlewareMixin):
     
     def _create_alert_if_needed(self, log_entry, rule):
         """Create an alert based on the log entry and rule."""
+        # If the log entry is None (which happens for localhost requests), skip alert creation
+        if log_entry is None:
+            return
+            
         # This will be implemented in the alerts app
         # For now, just log the alert
         logger.info(f"ALERT: Rule '{rule.name}' matched for {log_entry.source_ip} on {log_entry.path}")

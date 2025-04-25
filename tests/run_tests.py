@@ -7,6 +7,11 @@ import os
 import sys
 import unittest
 import argparse
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
+# Import test setup function
 from tests import setup_django_test_environment
 
 # Import test modules

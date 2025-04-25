@@ -184,6 +184,10 @@ ENABLE_ALERTS = True
 ENABLE_AI_CLASSIFIER = True
 ENABLE_DASHBOARD = True
 
+# IP logging exclusion settings
+EXCLUDE_HOST_IPS = True  # Auto-detect and exclude the host's own IP addresses
+EXCLUDED_IPS = ['64.130.127.37', '3.88.244.164', '172.31.26.20']  # Manually excluded IPs
+
 # Slack webhook for alerts (optional)
 SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL') # Remove default
 
