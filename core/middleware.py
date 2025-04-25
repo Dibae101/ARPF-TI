@@ -25,6 +25,17 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         self._load_rules()
         # Add this attribute for Django compatibility
         self.async_mode = False
+        
+    def __call__(self, request):
+        """Override the MiddlewareMixin __call__ method to fix AttributeError."""
+        # Handle the request
+        response = self.process_request(request)
+        if response is None:
+            # No response from process_request, continue to the next middleware
+            response = self.get_response(request)
+            # Process the response
+            response = self.process_response(request, response)
+        return response
     
     def _load_rules(self):
         """Load active rules from the database."""
