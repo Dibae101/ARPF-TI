@@ -17,25 +17,14 @@ class RequestLoggerMiddleware(MiddlewareMixin):
     """
     
     def __init__(self, get_response=None):
-        super().__init__(get_response)  # Call parent's __init__ to properly initialize MiddlewareMixin
+        super().__init__(get_response)  # Correctly call parent's __init__
         self.get_response = get_response
         self.active_rules = None
         self.last_rules_check = 0
         self.rules_cache_ttl = 60  # Cache rules for 60 seconds
         self._load_rules()
         # Add this attribute for Django compatibility
-        self.async_mode = False
-        
-    def __call__(self, request):
-        """Override the MiddlewareMixin __call__ method to fix AttributeError."""
-        # Handle the request
-        response = self.process_request(request)
-        if response is None:
-            # No response from process_request, continue to the next middleware
-            response = self.get_response(request)
-            # Process the response
-            response = self.process_response(request, response)
-        return response
+        self.async_mode = False # Ensure this is correctly indented
     
     def _load_rules(self):
         """Load active rules from the database."""

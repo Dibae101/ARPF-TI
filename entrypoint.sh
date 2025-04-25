@@ -11,6 +11,6 @@ python manage.py migrate --noinput
 # echo "Collecting static files..."
 # python manage.py collectstatic --noinput
 
-# Start Gunicorn server
+# Start Gunicorn server with fewer workers and increased timeout
 echo "Starting Gunicorn..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 3 arpf_ti.wsgi:application
+exec gunicorn --bind 0.0.0.0:8000 --workers 1 --timeout 300 arpf_ti.wsgi:application

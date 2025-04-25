@@ -124,6 +124,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Increase max upload size (e.g., to 100MB)
+# Default is 2.5MB (2621440 bytes)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 * 1024 * 1024 bytes
+FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600 # Also set this for consistency
+
 # Email configuration for alerts
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('SMTP_SERVER') # Remove default
