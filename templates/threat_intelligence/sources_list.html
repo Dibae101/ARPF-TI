@@ -10,16 +10,23 @@
         </li>
         <li>
             <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clip-rule="evenodd"></path>
                 </svg>
-                <a href="{% url 'threat_intelligence:index' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Threat Intelligence</a>
+                <a href="{% url 'threat_intelligence:index' %}"
+                    class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Threat Intelligence</a>
             </div>
         </li>
         <li aria-current="page">
             <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clip-rule="evenodd"></path>
                 </svg>
                 <span class="ml-1 font-medium text-gray-500 md:ml-2">Sources</span>
             </div>
@@ -34,7 +41,8 @@
         <h1 class="text-2xl font-bold text-gray-900">Threat Intelligence Sources</h1>
         <p class="mt-1 text-sm text-gray-600">Manage your threat intelligence data sources</p>
     </div>
-    <a href="{% url 'threat_intelligence:source_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
+    <a href="{% url 'threat_intelligence:source_add' %}"
+        class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
         <i class="fas fa-plus mr-2"></i> Add Source
     </a>
 </div>
@@ -45,25 +53,32 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Name
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         URL
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Last Updated
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Entries
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                     </th>
                 </tr>
@@ -72,7 +87,8 @@
                 {% for source in sources %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        <a href="{% url 'threat_intelligence:source_detail' source_id=source.id %}" class="text-blue-600 hover:text-blue-900">
+                        <a href="{% url 'threat_intelligence:source_detail' source_id=source.id %}"
+                            class="text-blue-600 hover:text-blue-900">
                             {{ source.name }}
                         </a>
                     </td>
@@ -84,13 +100,13 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {% if source.is_active %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                Active
-                            </span>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Active
+                        </span>
                         {% else %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                Inactive
-                            </span>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                            Inactive
+                        </span>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -101,13 +117,16 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div class="flex space-x-2">
-                            <a href="{% url 'threat_intelligence:source_edit' source_id=source.id %}" class="text-blue-500 hover:text-blue-900" title="Edit">
+                            <a href="{% url 'threat_intelligence:source_edit' source_id=source.id %}"
+                                class="text-blue-500 hover:text-blue-900" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <a href="{% url 'threat_intelligence:source_delete' source_id=source.id %}" class="text-red-500 hover:text-red-900" title="Delete">
+                            <a href="{% url 'threat_intelligence:source_delete' source_id=source.id %}"
+                                class="text-red-500 hover:text-red-900" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </a>
-                            <a href="{% url 'threat_intelligence:update_source_now' source_id=source.id %}" class="text-green-500 hover:text-green-900" title="Update Now">
+                            <a href="{% url 'threat_intelligence:update_source_now' source_id=source.id %}"
+                                class="text-green-500 hover:text-green-900" title="Update Now">
                                 <i class="fas fa-sync-alt"></i>
                             </a>
                         </div>
@@ -116,7 +135,8 @@
                 {% empty %}
                 <tr>
                     <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                        No threat intelligence sources found. <a href="{% url 'threat_intelligence:source_add' %}" class="text-blue-600 hover:text-blue-900">Add your first source</a>.
+                        No threat intelligence sources found. <a href="{% url 'threat_intelligence:source_add' %}"
+                            class="text-blue-600 hover:text-blue-900">Add your first source</a>.
                     </td>
                 </tr>
                 {% endfor %}
@@ -136,7 +156,8 @@
             <h3 class="text-lg font-semibold text-gray-900">TAXII Feeds</h3>
         </div>
         <p class="text-gray-600 mb-4">
-            TAXII (Trusted Automated Exchange of Intelligence Information) is a protocol for exchanging cyber threat intelligence.
+            TAXII (Trusted Automated Exchange of Intelligence Information) is a protocol for exchanging cyber threat
+            intelligence.
         </p>
         <ul class="mt-4 text-gray-600 space-y-2">
             <li class="flex items-start">
@@ -153,7 +174,7 @@
             </li>
         </ul>
     </div>
-    
+
     <!-- MISP -->
     <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex items-center mb-4">
@@ -163,7 +184,8 @@
             <h3 class="text-lg font-semibold text-gray-900">MISP Instances</h3>
         </div>
         <p class="text-gray-600 mb-4">
-            MISP (Malware Information Sharing Platform) is an open-source threat intelligence platform for sharing and correlating indicators.
+            MISP (Malware Information Sharing Platform) is an open-source threat intelligence platform for sharing and
+            correlating indicators.
         </p>
         <ul class="mt-4 text-gray-600 space-y-2">
             <li class="flex items-start">
@@ -180,7 +202,7 @@
             </li>
         </ul>
     </div>
-    
+
     <!-- Custom API -->
     <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex items-center mb-4">

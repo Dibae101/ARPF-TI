@@ -1,5 +1,6 @@
 from django import forms
-from .models import ThreatIntelSource, AIClassifierModel, ThreatIntelEntry, FirewallRule
+from .models import ThreatIntelSource, ThreatIntelEntry
+from core.models import Rule
 
 class SourceForm(forms.ModelForm):
     """Form for adding/editing a threat intelligence source."""
@@ -10,16 +11,6 @@ class SourceForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
             'api_key': forms.PasswordInput(render_value=True),
-        }
-
-class AIModelForm(forms.ModelForm):
-    """Form for adding/editing an AI classifier model."""
-    
-    class Meta:
-        model = AIClassifierModel
-        fields = ['name', 'model_type', 'description', 'file_path', 'is_active']
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
         }
 
 class EntryFilterForm(forms.Form):
@@ -44,13 +35,11 @@ class FirewallRuleForm(forms.ModelForm):
     """Form for adding/editing a firewall rule."""
     
     class Meta:
-        model = FirewallRule
+        model = Rule  # Using the Rule model from core instead of FirewallRule
         fields = [
-            'name', 'description', 'rule_type', 'value', 'action', 
-            'category', 'direction', 'protocol', 'port', 'port_end',
-            'priority', 'is_active', 'is_temporary', 'expiry_date'
+            'name', 'description', 'rule_type', 'pattern', 'action',  
+            'priority', 'is_active'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 2}),
-            'expiry_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }

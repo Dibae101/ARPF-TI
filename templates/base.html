@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +17,7 @@
     <!-- Custom CSS -->
     {% block extra_css %}{% endblock %}
 </head>
+
 <body class="bg-gray-100 min-h-screen">
     <div class="flex h-screen bg-gray-100">
         <!-- Sidebar -->
@@ -63,7 +65,8 @@
                             {% if user.is_authenticated %}
                             <div class="flex items-center">
                                 <span class="mr-2">{{ user.username }}</span>
-                                <a href="{% url 'logout' %}" class="text-sm text-gray-500 hover:text-gray-700">Logout</a>
+                                <a href="{% url 'logout' %}"
+                                    class="text-sm text-gray-500 hover:text-gray-700">Logout</a>
                             </div>
                             {% else %}
                             <a href="{% url 'login' %}" class="text-sm text-blue-500 hover:text-blue-700">Login</a>
@@ -76,15 +79,16 @@
             <!-- Content Area -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
                 {% if messages %}
-                    <div class="mb-4">
-                        {% for message in messages %}
-                            <div class="p-4 mb-2 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                    <div
+                        class="p-4 mb-2 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                        {{ message }}
                     </div>
+                    {% endfor %}
+                </div>
                 {% endif %}
-                
+
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -94,4 +98,5 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

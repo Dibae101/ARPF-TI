@@ -1,94 +1,73 @@
 from django.db import models
 from django.utils import timezone
+from core.models import Rule
 import uuid
-import ipaddress
-import re
 import json
 
 class ThreatIntelSource(models.Model):
-    """
-    A source of threat intelligence data, such as IP blocklists, VPN databases, etc.
-    """
+    """Model for storing threat intelligence sources."""
     SOURCE_TYPES = [
+        ('taxii', 'TAXII Server'),
+        ('misp', 'MISP Instance'),
+        ('stix', 'STIX Files'),
+        ('custom', 'Custom API'),
         ('ip_list', 'IP Blocklist'),
         ('vpn_ips', 'VPN IP Addresses'),
         ('cloud_ips', 'Cloud Provider IPs'),
         ('botnet', 'Botnet Tracker'),
-        ('geo_block', 'Geographic Blocklist'),
-        ('custom', 'Custom Source'),
-        # Adding new source types for TAXII and MISP
-        ('taxii', 'TAXII Feed'),
-        ('misp', 'MISP Instance'),
-        ('stix', 'STIX File/Feed')
+        ('geo_block', 'Geographic Block List'),
     ]
     
-    name = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    source_type = models.CharField(max_length=20, choices=SOURCE_TYPES)
-    url = models.URLField(help_text="URL for fetching the threat intelligence data")
-    api_key = models.CharField(max_length=255, blank=True, null=True, help_text="API key if required for access")
-    is_active = models.BooleanField(default=True)
-    last_updated = models.DateTimeField(null=True, blank=True)
-    update_frequency = models.IntegerField(default=86400, help_text="Update frequency in seconds")
+    AUTH_METHODS = [
+        ('header', 'API Key in Header'),
+        ('parameter', 'API Key as URL Parameter'),
+        ('basic', 'Basic Authentication'),
+        ('none', 'No Authentication'),
+    ]
     
-    # Adding configuration fields for TAXII, MISP, and Custom API
-    config = models.JSONField(default=dict, blank=True, help_text="Additional configuration parameters in JSON format")
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True, null=True)
+    url = models.URLField(help_text="URL of the threat intelligence feed")
+    source_type = models.CharField(max_length=20, choices=SOURCE_TYPES)
+    api_key = models.CharField(max_length=255, blank=True, null=True, help_text="API key if required")
+    username = models.CharField(max_length=255, blank=True, null=True)
+    password = models.CharField(max_length=255, blank=True, null=True)
+    update_frequency = models.IntegerField(default=3600, help_text="Update frequency in seconds")
+    is_active = models.BooleanField(default=True)
+    last_updated = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    config = models.JSONField(default=dict, blank=True, help_text="Additional configuration parameters")
+    
+    # Add TAXII-specific fields
+    taxii_collection_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID of the TAXII collection")
+    taxii_collection_name = models.CharField(max_length=255, blank=True, null=True, help_text="Name of the TAXII collection")
+    
+    # Add MISP-specific fields
+    misp_verify_ssl = models.BooleanField(default=True, help_text="Verify SSL certificate for MISP connection")
+    misp_event_limit = models.IntegerField(default=100, help_text="Maximum number of MISP events to fetch")
+    
+    # Add Custom API-specific fields
+    api_auth_method = models.CharField(max_length=20, choices=AUTH_METHODS, default='header', help_text="Authentication method for custom API")
+    api_headers = models.JSONField(default=dict, blank=True, help_text="Custom headers for API requests")
+    api_params = models.JSONField(default=dict, blank=True, help_text="Default URL parameters for API requests")
     
     def __str__(self):
         return f"{self.name} ({self.get_source_type_display()})"
     
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = "Threat intelligence sources"
+        
     def get_config_value(self, key, default=None):
-        """Safely get a configuration value"""
+        """Get a configuration value from the config JSON field"""
         try:
             return self.config.get(key, default)
         except (AttributeError, json.JSONDecodeError):
             return default
-    
-    @property
-    def taxii_collection_name(self):
-        """Get TAXII collection name from config"""
-        return self.get_config_value('collection_name', '')
-    
-    @property
-    def taxii_collection_id(self):
-        """Get TAXII collection ID from config"""
-        return self.get_config_value('collection_id', '')
-    
-    @property
-    def taxii_version(self):
-        """Get TAXII version from config"""
-        return self.get_config_value('taxii_version', '2.1')
-    
-    @property
-    def misp_verify_ssl(self):
-        """Get MISP SSL verification setting from config"""
-        return self.get_config_value('verify_ssl', True)
-    
-    @property
-    def misp_event_limit(self):
-        """Get MISP event limit from config"""
-        return self.get_config_value('event_limit', 100)
-    
-    @property
-    def api_auth_method(self):
-        """Get custom API authentication method from config"""
-        return self.get_config_value('auth_method', 'header')
-    
-    @property
-    def api_headers(self):
-        """Get custom API headers from config"""
-        return self.get_config_value('headers', {})
-    
-    @property
-    def api_params(self):
-        """Get custom API parameters from config"""
-        return self.get_config_value('params', {})
 
 
 class ThreatIntelEntry(models.Model):
-    """
-    An individual entry from a threat intelligence source, such as an IP address or range.
-    """
+    """Model for storing threat intelligence data."""
     ENTRY_TYPES = [
         ('ip', 'IP Address'),
         ('ip_range', 'IP Range'),
@@ -106,7 +85,7 @@ class ThreatIntelEntry(models.Model):
         ('vulnerability', 'STIX Vulnerability')
     ]
     
-    source = models.ForeignKey(ThreatIntelSource, on_delete=models.CASCADE, related_name='entries')
+    source = models.ForeignKey('ThreatIntelSource', on_delete=models.CASCADE, related_name='entries')
     entry_type = models.CharField(max_length=20, choices=ENTRY_TYPES)
     value = models.CharField(max_length=255, help_text="The actual value to block or monitor")
     category = models.CharField(max_length=255, blank=True, null=True, help_text="Category of the threat")
@@ -156,182 +135,96 @@ class ThreatIntelEntry(models.Model):
         return self.get_metadata_value('kill_chain_phases', [])
 
 
-class AIClassifierModel(models.Model):
-    """
-    Represents an AI model used for classifying requests as malicious or benign.
-    """
-    MODEL_TYPES = [
-        ('random_forest', 'Random Forest'),
-        ('naive_bayes', 'Naive Bayes'),
-        ('neural_network', 'Neural Network'),
-        ('gpt', 'GPT-based Model'),
-        ('llama', 'Llama Model'),
-        ('llama_quantized', 'Llama Quantized'),
-        ('custom', 'Custom Model')
-    ]
+class SuggestedFirewallRule(models.Model):
+    """Model for storing firewall rules suggested by the AI based on threat detection"""
+    STATUS_CHOICES = (
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved'),
+        ('auto_approved', 'Auto-Approved'),
+        ('rejected', 'Rejected'),
+    )
     
-    name = models.CharField(max_length=255)
-    model_type = models.CharField(max_length=20, choices=MODEL_TYPES)
-    description = models.TextField(blank=True, null=True)
-    file_path = models.CharField(max_length=255, help_text="Path to the model file")
-    model_params = models.JSONField(default=dict, blank=True, help_text="Additional model parameters in JSON format")
-    is_active = models.BooleanField(default=True)
-    accuracy = models.FloatField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.name} ({self.get_model_type_display()})"
-
-
-class FirewallRule(models.Model):
-    """Model representing a firewall rule for blocking or allowing traffic."""
-    
-    # Rule types
-    TYPE_IP = 'ip'
-    TYPE_IP_RANGE = 'ip_range'
-    TYPE_COUNTRY = 'country'
-    TYPE_PORT = 'port'
-    TYPE_PORT_RANGE = 'port_range'
-    TYPE_PROTOCOL = 'protocol'
-    TYPE_CUSTOM = 'custom'
-    
-    RULE_TYPES = [
-        (TYPE_IP, 'Single IP Address'),
-        (TYPE_IP_RANGE, 'IP Address Range/CIDR'),
-        (TYPE_COUNTRY, 'Country Code'),
-        (TYPE_PORT, 'Single Port'),
-        (TYPE_PORT_RANGE, 'Port Range'),
-        (TYPE_PROTOCOL, 'Protocol'),
-        (TYPE_CUSTOM, 'Custom Expression'),
-    ]
-    
-    # Actions
-    ACTION_BLOCK = 'block'
-    ACTION_ALLOW = 'allow'
-    ACTION_LOG = 'log'
-    
-    ACTIONS = [
-        (ACTION_BLOCK, 'Block'),
-        (ACTION_ALLOW, 'Allow'),
-        (ACTION_LOG, 'Log Only'),
-    ]
-    
-    # Common protocols
-    PROTOCOL_TCP = 'tcp'
-    PROTOCOL_UDP = 'udp'
-    PROTOCOL_ICMP = 'icmp'
-    PROTOCOL_HTTP = 'http'
-    PROTOCOL_HTTPS = 'https'
-    PROTOCOL_FTP = 'ftp'
-    PROTOCOL_SSH = 'ssh'
-    PROTOCOL_SMTP = 'smtp'
-    PROTOCOL_DNS = 'dns'
-    
-    PROTOCOLS = [
-        (PROTOCOL_TCP, 'TCP'),
-        (PROTOCOL_UDP, 'UDP'),
-        (PROTOCOL_ICMP, 'ICMP'),
-        (PROTOCOL_HTTP, 'HTTP'),
-        (PROTOCOL_HTTPS, 'HTTPS'),
-        (PROTOCOL_FTP, 'FTP'),
-        (PROTOCOL_SSH, 'SSH'),
-        (PROTOCOL_SMTP, 'SMTP'),
-        (PROTOCOL_DNS, 'DNS'),
-    ]
-    
-    # Rule categories
-    CATEGORY_SECURITY = 'security'
-    CATEGORY_COMPLIANCE = 'compliance'
-    CATEGORY_TRAFFIC = 'traffic'
-    CATEGORY_CUSTOM = 'custom'
-    
-    CATEGORIES = [
-        (CATEGORY_SECURITY, 'Security'),
-        (CATEGORY_COMPLIANCE, 'Compliance'),
-        (CATEGORY_TRAFFIC, 'Traffic Management'),
-        (CATEGORY_CUSTOM, 'Custom'),
-    ]
-    
-    # Direction of traffic
-    DIRECTION_INBOUND = 'inbound'
-    DIRECTION_OUTBOUND = 'outbound'
-    DIRECTION_BOTH = 'both'
-    
-    DIRECTIONS = [
-        (DIRECTION_INBOUND, 'Inbound'),
-        (DIRECTION_OUTBOUND, 'Outbound'),
-        (DIRECTION_BOTH, 'Both Directions'),
-    ]
+    RULE_TYPE_CHOICES = (
+        ('ip', 'IP Address'),
+        ('path', 'Request Path'),
+        ('user_agent', 'User Agent'),
+        ('country', 'Country'),
+        ('combination', 'Combination'),
+    )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    rule_type = models.CharField(max_length=20, choices=RULE_TYPES)
-    value = models.CharField(max_length=255, help_text="IP, CIDR, country code, etc.")
-    action = models.CharField(max_length=20, choices=ACTIONS, default=ACTION_BLOCK)
-    category = models.CharField(max_length=20, choices=CATEGORIES, default=CATEGORY_SECURITY)
-    direction = models.CharField(max_length=20, choices=DIRECTIONS, default=DIRECTION_INBOUND)
-    protocol = models.CharField(max_length=20, choices=PROTOCOLS, blank=True, null=True)
-    port = models.IntegerField(blank=True, null=True)
-    port_end = models.IntegerField(blank=True, null=True, help_text="End port for range")
-    priority = models.IntegerField(default=100, help_text="Lower number = higher priority")
-    is_active = models.BooleanField(default=True)
-    is_temporary = models.BooleanField(default=False)
-    expiry_date = models.DateTimeField(blank=True, null=True)
-    source = models.CharField(max_length=255, blank=True, null=True, help_text="Source of this rule (e.g. manual, auto, api)")
+    rule_type = models.CharField(max_length=20, choices=RULE_TYPE_CHOICES)
+    pattern = models.CharField(max_length=255, help_text="The pattern to match (IP, path, etc.)")
+    description = models.TextField(help_text="AI-generated description of why this rule was suggested")
+    confidence = models.IntegerField(default=0, help_text="AI confidence level (0-100)")
+    attack_type = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    source_ip = models.GenericIPAddressField(blank=True, null=True)
+    request_path = models.CharField(max_length=255, blank=True, null=True)
+    user_agent = models.TextField(blank=True, null=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
+    additional_data = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+    reviewed_by = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.SET_NULL, 
+        blank=True, 
+        null=True,
+        related_name='reviewed_rules'
+    )
+    
+    def approve(self, user=None):
+        """Approve this suggested rule and create an actual firewall rule"""
+        self.status = 'approved'
+        self.reviewed_at = timezone.now()
+        self.reviewed_by = user
+        self.save()
+        
+        # Create an actual firewall rule
+        firewall_rule = Rule(
+            name=f"AI Suggested Rule - {self.rule_type} - {self.pattern[:30]}",
+            rule_type=self.rule_type,
+            pattern=self.pattern,
+            description=self.description,
+            is_active=True,
+            action='block'  # Default to block action
+        )
+        firewall_rule.save()
+        return firewall_rule
+    
+    def auto_approve(self):
+        """Auto-approve high-confidence rules"""
+        self.status = 'auto_approved'
+        self.reviewed_at = timezone.now()
+        self.save()
+        
+        # Create an actual firewall rule
+        firewall_rule = Rule(
+            name=f"AI Auto-Approved Rule - {self.rule_type} - {self.pattern[:30]}",
+            rule_type=self.rule_type,
+            pattern=self.pattern,
+            description=self.description,
+            is_active=True,
+            action='block'  # Default to block action
+        )
+        firewall_rule.save()
+        return firewall_rule
+        
+    def reject(self, user=None):
+        """Reject this suggested rule"""
+        self.status = 'rejected'
+        self.reviewed_at = timezone.now()
+        self.reviewed_by = user
+        self.save()
     
     class Meta:
-        ordering = ['priority', 'created_at']
-        verbose_name = "Firewall Rule"
-        verbose_name_plural = "Firewall Rules"
-    
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['rule_type']),
+            models.Index(fields=['status']),
+            models.Index(fields=['confidence']),
+        ]
+
     def __str__(self):
-        return f"{self.name} ({self.get_action_display()} {self.get_rule_type_display()})"
-    
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        
-        # Validate IP addresses
-        if self.rule_type == self.TYPE_IP:
-            try:
-                ipaddress.ip_address(self.value)
-            except ValueError:
-                raise ValidationError({'value': 'Invalid IP address format'})
-        
-        # Validate IP ranges/CIDR
-        elif self.rule_type == self.TYPE_IP_RANGE:
-            try:
-                ipaddress.ip_network(self.value, strict=False)
-            except ValueError:
-                raise ValidationError({'value': 'Invalid IP range or CIDR format'})
-        
-        # Validate country codes (ISO 3166-1 alpha-2)
-        elif self.rule_type == self.TYPE_COUNTRY:
-            if not re.match(r'^[A-Z]{2}$', self.value):
-                raise ValidationError({'value': 'Country code must be a 2-letter ISO code (e.g., US, GB)'})
-        
-        # Validate port ranges
-        elif self.rule_type == self.TYPE_PORT_RANGE:
-            if self.port is None or self.port_end is None:
-                raise ValidationError('Both start and end ports are required for port ranges')
-            if self.port < 1 or self.port > 65535 or self.port_end < 1 or self.port_end > 65535:
-                raise ValidationError('Ports must be between 1 and 65535')
-            if self.port > self.port_end:
-                raise ValidationError('Start port must be less than or equal to end port')
-    
-    def is_expired(self):
-        """Check if a temporary rule has expired."""
-        if not self.is_temporary:
-            return False
-        if self.expiry_date is None:
-            return False
-        return timezone.now() > self.expiry_date
-    
-    @classmethod
-    def get_active_rules(cls):
-        """Return all active, non-expired rules."""
-        active_rules = cls.objects.filter(is_active=True)
-        return [rule for rule in active_rules if not rule.is_expired()]
+        return f"{self.get_rule_type_display()}: {self.pattern} ({self.get_status_display()})"

@@ -56,6 +56,7 @@ class RequestLog(models.Model):
     response_code = models.IntegerField()
     response_time_ms = models.IntegerField()
     country = models.CharField(max_length=2, blank=True, null=True)
+    extra_data = models.JSONField(default=dict, blank=True, null=True)
     
     def __str__(self):
         return f"{self.source_ip} - {self.path} ({self.timestamp})"

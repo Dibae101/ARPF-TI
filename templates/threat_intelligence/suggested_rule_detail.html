@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Firewall Rule Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Suggested Firewall Rule Details</h1>
+        <a href="{% url 'threat_intelligence:suggested_rules_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Rules
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Rule Information</h5>
+                    <span class="badge 
+                        {% if rule.status == 'pending' %}bg-warning
+                        {% elif rule.status == 'approved' %}bg-success
+                        {% elif rule.status == 'auto_approved' %}bg-info
+                        {% else %}bg-secondary{% endif %}">
+                        {{ rule.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Rule Type:</div>
+                        <div class="col-md-8">
+                            <span
+                                class="badge {% if rule.rule_type == 'ip' %}bg-danger{% elif rule.rule_type == 'path' %}bg-warning{% elif rule.rule_type == 'user_agent' %}bg-info{% else %}bg-secondary{% endif %}">
+                                {{ rule.get_rule_type_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Pattern:</div>
+                        <div class="col-md-8">
+                            <code>{{ rule.pattern }}</code>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Description:</div>
+                        <div class="col-md-8">{{ rule.description }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Confidence:</div>
+                        <div class="col-md-8">
+                            <div class="progress">
+                                <div class="progress-bar 
+                                    {% if rule.confidence >= 90 %}bg-danger
+                                    {% elif rule.confidence >= 70 %}bg-warning
+                                    {% else %}bg-info{% endif %}" role="progressbar"
+                                    style="width: {{ rule.confidence }}%" aria-valuenow="{{ rule.confidence }}"
+                                    aria-valuemin="0" aria-valuemax="100">{{ rule.confidence }}%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Attack Type:</div>
+                        <div class="col-md-8">{{ rule.attack_type }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Source IP:</div>
+                        <div class="col-md-8">{{ rule.source_ip|default:"N/A" }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Request Path:</div>
+                        <div class="col-md-8">{{ rule.request_path|default:"N/A" }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Created:</div>
+                        <div class="col-md-8">{{ rule.created_at }}</div>
+                    </div>
+
+                    {% if rule.reviewed_at %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Reviewed:</div>
+                        <div class="col-md-8">{{ rule.reviewed_at }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if rule.status == 'pending' %}
+                <div class="card-footer bg-light d-flex justify-content-between">
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="fas fa-times"></i> Reject Rule
+                        </button>
+                    </form>
+
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Approve & Apply Rule
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            {% if similar_rules %}
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Similar Rules</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for similar in similar_rules %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span
+                                        class="badge {% if similar.rule_type == 'ip' %}bg-danger{% elif similar.rule_type == 'path' %}bg-warning{% elif similar.rule_type == 'user_agent' %}bg-info{% else %}bg-secondary{% endif %} me-2">
+                                        {{ similar.get_rule_type_display }}
+                                    </span>
+                                    <code>{{ similar.pattern|truncatechars:20 }}</code>
+                                </div>
+                                <span class="badge 
+                                    {% if similar.status == 'pending' %}bg-warning
+                                    {% elif similar.status == 'approved' %}bg-success
+                                    {% elif similar.status == 'auto_approved' %}bg-info
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ similar.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">{{ similar.created_at|date:"M d, Y" }}</small>
+                                <a href="{% url 'threat_intelligence:suggested_rule_detail' similar.id %}"
+                                    class="btn btn-sm btn-outline-primary float-end">
+                                    View
+                                </a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

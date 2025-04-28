@@ -11,7 +11,8 @@
         <h1 class="text-2xl font-semibold text-gray-800">
             {% if rule %}Edit Firewall Rule: {{ rule.name }}{% else %}Add Firewall Rule{% endif %}
         </h1>
-        <a href="{% url 'threat_intelligence:firewall_rules_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white py-1 px-3 rounded text-sm">
+        <a href="{% url 'threat_intelligence:firewall_rules_list' %}"
+            class="bg-gray-500 hover:bg-gray-600 text-white py-1 px-3 rounded text-sm">
             <i class="fas fa-arrow-left"></i> Back to Rules
         </a>
     </div>
@@ -25,22 +26,25 @@
         <div class="p-4">
             <form method="post" action="">
                 {% csrf_token %}
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <div class="mb-4">
-                            <label for="name" class="block mb-1 font-medium">Rule Name <span class="text-red-500">*</span></label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded" id="name" name="name" 
-                                   value="{{ rule.name|default:'' }}" required>
+                            <label for="name" class="block mb-1 font-medium">Rule Name <span
+                                    class="text-red-500">*</span></label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded" id="name"
+                                name="name" value="{{ rule.name|default:'' }}" required>
                         </div>
                     </div>
                     <div>
                         <div class="mb-4">
-                            <label for="rule_type" class="block mb-1 font-medium">Rule Type <span class="text-red-500">*</span></label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="rule_type" name="rule_type" required>
+                            <label for="rule_type" class="block mb-1 font-medium">Rule Type <span
+                                    class="text-red-500">*</span></label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="rule_type"
+                                name="rule_type" required>
                                 <option value="">-- Select Type --</option>
                                 {% for type_code, type_name in rule_types %}
-                                <option value="{{ type_code }}" {% if rule.rule_type == type_code %}selected{% endif %}>
+                                <option value="{{ type_code }}" {% if rule.rule_type==type_code %}selected{% endif %}>
                                     {{ type_name }}
                                 </option>
                                 {% endfor %}
@@ -49,18 +53,20 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="mb-4">
                     <label for="description" class="block mb-1 font-medium">Description</label>
-                    <textarea class="w-full px-3 py-2 border border-gray-300 rounded" id="description" name="description" rows="2">{{ rule.description|default:'' }}</textarea>
+                    <textarea class="w-full px-3 py-2 border border-gray-300 rounded" id="description"
+                        name="description" rows="2">{{ rule.description|default:'' }}</textarea>
                 </div>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <div class="mb-4">
-                            <label for="value" class="block mb-1 font-medium">Rule Value <span class="text-red-500">*</span></label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded" id="value" name="value" 
-                                   value="{{ rule.value|default:'' }}" required>
+                            <label for="value" class="block mb-1 font-medium">Rule Value <span
+                                    class="text-red-500">*</span></label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded" id="value"
+                                name="value" value="{{ rule.value|default:'' }}" required>
                             <small class="text-gray-500 text-sm" id="value-help">
                                 Enter the value according to the selected rule type
                             </small>
@@ -68,10 +74,13 @@
                     </div>
                     <div>
                         <div class="mb-4">
-                            <label for="action" class="block mb-1 font-medium">Action <span class="text-red-500">*</span></label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="action" name="action" required>
+                            <label for="action" class="block mb-1 font-medium">Action <span
+                                    class="text-red-500">*</span></label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="action" name="action"
+                                required>
                                 {% for action_code, action_name in actions %}
-                                <option value="{{ action_code }}" {% if rule.action == action_code %}selected{% elif not rule and action_code == 'block' %}selected{% endif %}>
+                                <option value="{{ action_code }}" {% if rule.action==action_code %}selected{% elif not
+                                    rule and action_code=='block' %}selected{% endif %}>
                                     {{ action_name }}
                                 </option>
                                 {% endfor %}
@@ -79,14 +88,17 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                         <div class="mb-4">
-                            <label for="category" class="block mb-1 font-medium">Category <span class="text-red-500">*</span></label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="category" name="category" required>
+                            <label for="category" class="block mb-1 font-medium">Category <span
+                                    class="text-red-500">*</span></label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="category"
+                                name="category" required>
                                 {% for category_code, category_name in categories %}
-                                <option value="{{ category_code }}" {% if rule.category == category_code %}selected{% elif not rule and category_code == 'security' %}selected{% endif %}>
+                                <option value="{{ category_code }}" {% if rule.category==category_code %}selected{% elif
+                                    not rule and category_code=='security' %}selected{% endif %}>
                                     {{ category_name }}
                                 </option>
                                 {% endfor %}
@@ -95,10 +107,13 @@
                     </div>
                     <div>
                         <div class="mb-4">
-                            <label for="direction" class="block mb-1 font-medium">Direction <span class="text-red-500">*</span></label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="direction" name="direction" required>
+                            <label for="direction" class="block mb-1 font-medium">Direction <span
+                                    class="text-red-500">*</span></label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="direction"
+                                name="direction" required>
                                 {% for direction_code, direction_name in directions %}
-                                <option value="{{ direction_code }}" {% if rule.direction == direction_code %}selected{% elif not rule and direction_code == 'inbound' %}selected{% endif %}>
+                                <option value="{{ direction_code }}" {% if rule.direction==direction_code %}selected{%
+                                    elif not rule and direction_code=='inbound' %}selected{% endif %}>
                                     {{ direction_name }}
                                 </option>
                                 {% endfor %}
@@ -107,24 +122,27 @@
                     </div>
                     <div>
                         <div class="mb-4">
-                            <label for="priority" class="block mb-1 font-medium">Priority <span class="text-red-500">*</span></label>
-                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded" id="priority" name="priority" 
-                                   value="{{ rule.priority|default:'100' }}" min="1" max="1000" required>
+                            <label for="priority" class="block mb-1 font-medium">Priority <span
+                                    class="text-red-500">*</span></label>
+                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded" id="priority"
+                                name="priority" value="{{ rule.priority|default:'100' }}" min="1" max="1000" required>
                             <small class="text-gray-500 text-sm">
                                 Lower number = higher priority (1-1000)
                             </small>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 port-protocol-fields" style="display: none;">
                     <div>
                         <div class="mb-4">
                             <label for="protocol" class="block mb-1 font-medium">Protocol</label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="protocol" name="protocol">
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded" id="protocol"
+                                name="protocol">
                                 <option value="">-- Select Protocol --</option>
                                 {% for protocol_code, protocol_name in protocols %}
-                                <option value="{{ protocol_code }}" {% if rule.protocol == protocol_code %}selected{% endif %}>
+                                <option value="{{ protocol_code }}" {% if rule.protocol==protocol_code %}selected{%
+                                    endif %}>
                                     {{ protocol_name }}
                                 </option>
                                 {% endfor %}
@@ -134,27 +152,27 @@
                     <div>
                         <div class="mb-4">
                             <label for="port" class="block mb-1 font-medium">Port</label>
-                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded" id="port" name="port" 
-                                   value="{{ rule.port|default:'' }}" min="1" max="65535">
+                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded" id="port"
+                                name="port" value="{{ rule.port|default:'' }}" min="1" max="65535">
                             <small class="text-gray-500 text-sm">Port number (1-65535)</small>
                         </div>
                     </div>
                     <div class="port-range-field" style="display: none;">
                         <div class="mb-4">
                             <label for="port_end" class="block mb-1 font-medium">End Port</label>
-                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded" id="port_end" name="port_end" 
-                                   value="{{ rule.port_end|default:'' }}" min="1" max="65535">
+                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded" id="port_end"
+                                name="port_end" value="{{ rule.port_end|default:'' }}" min="1" max="65535">
                             <small class="text-gray-500 text-sm">End port for range</small>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <div class="mb-4">
                             <div class="flex items-center mb-2">
-                                <input type="checkbox" class="h-4 w-4 text-blue-600 rounded" id="is_active" name="is_active" 
-                                       {% if rule.is_active|default:True %}checked{% endif %}>
+                                <input type="checkbox" class="h-4 w-4 text-blue-600 rounded" id="is_active"
+                                    name="is_active" {% if rule.is_active|default:True %}checked{% endif %}>
                                 <label class="ml-2" for="is_active">
                                     Active Rule
                                 </label>
@@ -167,15 +185,17 @@
                     <div>
                         <div class="mb-4">
                             <div class="flex items-center mb-2">
-                                <input type="checkbox" class="h-4 w-4 text-blue-600 rounded" id="is_temporary" name="is_temporary" 
-                                       {% if rule.is_temporary %}checked{% endif %}>
+                                <input type="checkbox" class="h-4 w-4 text-blue-600 rounded" id="is_temporary"
+                                    name="is_temporary" {% if rule.is_temporary %}checked{% endif %}>
                                 <label class="ml-2" for="is_temporary">
                                     Temporary Rule
                                 </label>
                             </div>
-                            <div id="expiry-date-container" style="{% if not rule.is_temporary %}display: none;{% endif %}">
-                                <input type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded" id="expiry_date" name="expiry_date" 
-                                       value="{% if rule.expiry_date %}{{ rule.expiry_date|date:'Y-m-d\TH:i' }}{% endif %}">
+                            <div id="expiry-date-container"
+                                style="{% if not rule.is_temporary %}display: none;{% endif %}">
+                                <input type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded"
+                                    id="expiry_date" name="expiry_date"
+                                    value="{% if rule.expiry_date %}{{ rule.expiry_date|date:'Y-m-d\TH:i' }}{% endif %}">
                                 <small class="text-gray-500 text-sm">
                                     When this rule will expire
                                 </small>
@@ -183,12 +203,13 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="mt-6">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded mr-2">
                         {% if rule %}Update{% else %}Create{% endif %} Rule
                     </button>
-                    <a href="{% url 'threat_intelligence:firewall_rules_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded">
+                    <a href="{% url 'threat_intelligence:firewall_rules_list' %}"
+                        class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded">
                         Cancel
                     </a>
                 </div>
@@ -200,7 +221,7 @@
 
 {% block extra_js %}
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         const ruleTypeHelp = {
             'ip': 'Enter a single IP address (e.g., 192.168.1.1)',
             'ip_range': 'Enter an IP range in CIDR notation (e.g., 192.168.1.0/24)',
@@ -210,15 +231,15 @@
             'protocol': 'Configure a rule for a specific protocol',
             'custom': 'Create a custom rule (advanced)'
         };
-        
+
         function updateRuleTypeHelpText() {
             const selectedType = $('#rule_type').val();
             $('#rule-type-help').text(ruleTypeHelp[selectedType] || '');
-            
+
             // Show/hide port and protocol fields based on rule type
             if (selectedType === 'port' || selectedType === 'port_range' || selectedType === 'protocol') {
                 $('.port-protocol-fields').show();
-                
+
                 // Show/hide port range field
                 if (selectedType === 'port_range') {
                     $('.port-range-field').show();
@@ -229,18 +250,18 @@
                 $('.port-protocol-fields').hide();
             }
         }
-        
+
         // Initial update
         updateRuleTypeHelpText();
-        
+
         // Update when rule type changes
         $('#rule_type').change(updateRuleTypeHelpText);
-        
+
         // Toggle expiry date field
-        $('#is_temporary').change(function() {
+        $('#is_temporary').change(function () {
             if ($(this).is(':checked')) {
                 $('#expiry-date-container').show();
-                
+
                 // Set default expiry date to 24 hours from now if empty
                 if (!$('#expiry_date').val()) {
                     const now = new Date();

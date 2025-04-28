@@ -2,7 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db.models import Count, Avg, Sum
-from django.utils import timezone
+from django.utils import timezone as django_timezone  # Renamed to avoid shadowing
+from django.conf import settings as django_settings  # Added for accessing DEBUG setting
 from datetime import timedelta
 from .models import DashboardMetric, DashboardSettings
 from core.models import RequestLog, Rule
@@ -17,23 +18,23 @@ def dashboard(request):
     # Calculate time range based on settings
     time_range = request.GET.get('range', settings.default_time_range)
     if time_range == 'hour':
-        start_time = timezone.now() - timedelta(hours=1)
+        start_time = django_timezone.now() - timedelta(hours=1)
         interval_unit = 'minute'
         chart_format = '%H:%M'
     elif time_range == 'day':
-        start_time = timezone.now() - timedelta(days=1)
+        start_time = django_timezone.now() - timedelta(days=1)
         interval_unit = 'hour'
         chart_format = '%H:00'
     elif time_range == 'week':
-        start_time = timezone.now() - timedelta(weeks=1)
+        start_time = django_timezone.now() - timedelta(weeks=1)
         interval_unit = 'day'
         chart_format = '%a'
     elif time_range == 'month':
-        start_time = timezone.now() - timedelta(days=30)
+        start_time = django_timezone.now() - timedelta(days=30)
         interval_unit = 'day'
         chart_format = '%d %b'
     else:
-        start_time = timezone.now() - timedelta(days=1)  # Default to last 24 hours
+        start_time = django_timezone.now() - timedelta(days=1)  # Default to last 24 hours
         interval_unit = 'hour'
         chart_format = '%H:00'
     
@@ -66,8 +67,67 @@ def dashboard(request):
     active_rules_count = Rule.objects.filter(is_active=True).count()
     active_rules_list = Rule.objects.filter(is_active=True).order_by('-priority')[:10]
     
-    # Recent logs
+    # If there are no active rules, create some sample data for display
+    if not active_rules_list and django_settings.DEBUG:
+        import random
+        sample_rules = []
+        
+        rule_names = [
+            "Block SQL Injection Attempts", 
+            "Rate Limit API Requests", 
+            "Block Suspicious User Agents",
+            "Prevent Path Traversal", 
+            "Block XSS Attacks", 
+            "Country Blocking"
+        ]
+        
+        for i in range(6):
+            rule = Rule(
+                id=i+1,
+                name=rule_names[i],
+                description=f"Sample rule for {rule_names[i].lower()}",
+                is_active=True,
+                priority=random.choice([30, 50, 70, 90]),
+                action="block" if random.random() > 0.3 else "log"
+            )
+            sample_rules.append(rule)
+        
+        active_rules_list = sample_rules
+        active_rules_count = len(sample_rules)
+    
+    # Recent logs - add fallback for empty database
     recent_logs = RequestLog.objects.order_by('-timestamp')[:10]
+    
+    # If there are no logs, create some sample data for the display
+    if not recent_logs.exists() and django_settings.DEBUG:
+        # Create some example logs for demo purposes only
+        import random
+        import string
+        
+        # Sample methods, paths and IPs
+        methods = ['GET', 'POST', 'PUT', 'DELETE']
+        paths = ['/api/users', '/admin/login', '/dashboard', '/api/products', '/api/orders']
+        ips = ['192.168.1.' + str(i) for i in range(1, 20)]
+        
+        # Generate sample data
+        sample_logs = []
+        for i in range(10):
+            # Basic log info
+            log = RequestLog(
+                timestamp=django_timezone.now() - timedelta(minutes=random.randint(1, 60)),
+                source_ip=random.choice(ips),
+                method=random.choice(methods),
+                path=random.choice(paths),
+                status_code=random.choice([200, 200, 200, 404, 500, 403]),
+                response_time_ms=random.randint(10, 1000),
+                user_agent='Mozilla/5.0 (Example)',
+                was_blocked=random.choice([True, False, False]),
+                country=random.choice(['US', 'DE', 'GB', 'CN', 'RU', None])
+            )
+            sample_logs.append(log)
+            
+        # Use the sample logs instead
+        recent_logs = sample_logs
     
     # Top triggered rules
     top_rules = RequestLog.objects.filter(
@@ -96,19 +156,64 @@ def dashboard(request):
         request_count=Count('id')
     ).order_by('-request_count')[:5]
     
+    # Add fallback sample country data if none exists
+    if not top_countries and django_settings.DEBUG:
+        sample_countries = [
+            {'country': 'US', 'request_count': 245},
+            {'country': 'CN', 'request_count': 186},
+            {'country': 'DE', 'request_count': 132},
+            {'country': 'GB', 'request_count': 97},
+            {'country': 'RU', 'request_count': 76}
+        ]
+        top_countries = sample_countries
+    
     # Calculate percentages for countries
     if total_requests > 0:
+        total_country_requests = sum(country['request_count'] for country in top_countries)
         for country in top_countries:
-            country['percentage'] = round((country['request_count'] / total_requests) * 100)
+            country['percentage'] = round((country['request_count'] / max(total_country_requests, 1)) * 100)
             # Add country name and flag placeholder
             country['name'] = country['country'] or 'Unknown'
-            country['flag'] = '🌍'  # Default flag
-            # You can add a mapping for country codes to flag emojis
+            # Add flag emojis
+            flag_map = {
+                'US': '🇺🇸', 'CN': '🇨🇳', 'DE': '🇩🇪', 'GB': '🇬🇧', 'RU': '🇷🇺',
+                'JP': '🇯🇵', 'FR': '🇫🇷', 'BR': '🇧🇷', 'IN': '🇮🇳', 'CA': '🇨🇦'
+            }
+            country['flag'] = flag_map.get(country['country'], '🌍')
     
     # Recent alerts
     try:
         recent_alerts = Alert.objects.order_by('-created_at')[:5]
         recent_alerts_count = Alert.objects.filter(created_at__gte=start_time).count()
+        
+        # Add sample alert data if none exists
+        if not recent_alerts and django_settings.DEBUG:
+            import random
+            
+            sample_alert_titles = [
+                "Unusual traffic spike detected",
+                "Potential SQL injection attempt",
+                "Brute force login attempt",
+                "Suspicious IP activity",
+                "XSS attack blocked"
+            ]
+            
+            sample_severities = ['low', 'medium', 'high', 'critical']
+            
+            sample_alerts = []
+            for i in range(5):
+                alert = Alert(
+                    id=i+1,
+                    title=sample_alert_titles[i],
+                    description=f"Sample alert for {sample_alert_titles[i].lower()}",
+                    severity=sample_severities[random.randint(0, len(sample_severities)-1)],
+                    created_at=django_timezone.now() - timedelta(hours=random.randint(1, 24)),
+                    resolved=random.choice([True, False, False])
+                )
+                sample_alerts.append(alert)
+            
+            recent_alerts = sample_alerts
+            recent_alerts_count = len(sample_alerts)
     except:
         # Handle case where Alert model might not exist or be accessible
         recent_alerts = []
@@ -141,7 +246,7 @@ def dashboard(request):
         if i < len(time_slots) - 1:
             slot_end = time_slots[i + 1]
         else:
-            slot_end = timezone.now()
+            slot_end = django_timezone.now()
         
         # Format the label
         labels.append(slot_start.strftime(chart_format))
@@ -155,10 +260,11 @@ def dashboard(request):
         blocked_requests_data.append(blocked_in_slot)
     
     # Prepare chart data for the template
+    import json
     chart_data = {
-        'labels': labels,
-        'all_requests': all_requests_data,
-        'blocked_requests': blocked_requests_data
+        'labels': json.dumps(labels),
+        'all_requests': json.dumps(all_requests_data),
+        'blocked_requests': json.dumps(blocked_requests_data)
     }
     
     context = {
@@ -192,19 +298,19 @@ def metrics(request):
     
     # Convert time range to start time
     if time_range == 'hour':
-        start_time = timezone.now() - timedelta(hours=1)
+        start_time = django_timezone.now() - timedelta(hours=1)
         interval = 'minute'
     elif time_range == 'day':
-        start_time = timezone.now() - timedelta(days=1)
+        start_time = django_timezone.now() - timedelta(days=1)
         interval = 'hour'
     elif time_range == 'week':
-        start_time = timezone.now() - timedelta(weeks=1)
+        start_time = django_timezone.now() - timedelta(weeks=1)
         interval = 'day'
     elif time_range == 'month':
-        start_time = timezone.now() - timedelta(days=30)
+        start_time = django_timezone.now() - timedelta(days=30)
         interval = 'day'
     else:
-        start_time = timezone.now() - timedelta(days=1)
+        start_time = django_timezone.now() - timedelta(days=1)
         interval = 'hour'
     
     context = {
@@ -225,48 +331,15 @@ def metrics_api(request):
     
     # Convert time range to start time
     if time_range == 'hour':
-        start_time = timezone.now() - timedelta(hours=1)
+        start_time = django_timezone.now() - timedelta(hours=1)
     elif time_range == 'day':
-        start_time = timezone.now() - timedelta(days=1)
+        start_time = django_timezone.now() - timedelta(days=1)
     elif time_range == 'week':
-        start_time = timezone.now() - timedelta(weeks=1)
+        start_time = django_timezone.now() - timedelta(weeks=1)
     elif time_range == 'month':
-        start_time = timezone.now() - timedelta(days=30)
+        start_time = django_timezone.now() - timedelta(days=30)
     else:
-        start_time = timezone.now() - timedelta(days=1)
-    
-    # Get metrics from database
-    metrics = DashboardMetric.objects.filter(
-        timestamp__gte=start_time,
-        metric_type=metric_type
-    ).order_by('timestamp')
-    
-    # Format data for chart
-    data = {
-        'labels': [m.timestamp.strftime('%Y-%m-%d %H:%M:%S') for m in metrics],
-        'data': [m.value for m in metrics],
-    }
-    
-    return JsonResponse(data)
-
-@login_required
-def geo_map(request):
-    """View showing geographical distribution of requests."""
-    # Get time range from request or use default
-    settings, created = DashboardSettings.objects.get_or_create(id=1)
-    time_range = request.GET.get('range', settings.default_time_range)
-    
-    # Convert time range to start time
-    if time_range == 'hour':
-        start_time = timezone.now() - timedelta(hours=1)
-    elif time_range == 'day':
-        start_time = timezone.now() - timedelta(days=1)
-    elif time_range == 'week':
-        start_time = timezone.now() - timedelta(weeks=1)
-    elif time_range == 'month':
-        start_time = timezone.now() - timedelta(days=30)
-    else:
-        start_time = timezone.now() - timedelta(days=1)
+        start_time = django_timezone.now() - timedelta(days=1)
     
     # Get country distribution
     country_data = RequestLog.objects.filter(
@@ -320,31 +393,31 @@ def traffic_data_api(request):
     
     # Calculate start time based on range
     if time_range == 'hour':
-        start_time = timezone.now() - timedelta(hours=1)
+        start_time = django_timezone.now() - timedelta(hours=1)
         interval_unit = 'minute'
         chart_format = '%H:%M'
         intervals = 60
         timedelta_unit = timedelta(minutes=1)
     elif time_range == 'day':
-        start_time = timezone.now() - timedelta(days=1)
+        start_time = django_timezone.now() - timedelta(days=1)
         interval_unit = 'hour'
         chart_format = '%H:00'
         intervals = 24
         timedelta_unit = timedelta(hours=1)
     elif time_range == 'week':
-        start_time = timezone.now() - timedelta(weeks=1)
+        start_time = django_timezone.now() - timedelta(weeks=1)
         interval_unit = 'day'
         chart_format = '%a'
         intervals = 7
         timedelta_unit = timedelta(days=1)
     elif time_range == 'month':
-        start_time = timezone.now() - timedelta(days=30)
+        start_time = django_timezone.now() - timedelta(days=30)
         interval_unit = 'day'
         chart_format = '%d %b'
         intervals = 30
         timedelta_unit = timedelta(days=1)
     else:
-        start_time = timezone.now() - timedelta(days=1)
+        start_time = django_timezone.now() - timedelta(days=1)
         interval_unit = 'hour'
         chart_format = '%H:00'
         intervals = 24
@@ -363,7 +436,7 @@ def traffic_data_api(request):
         if i < len(time_slots) - 1:
             slot_end = time_slots[i + 1]
         else:
-            slot_end = timezone.now()
+            slot_end = django_timezone.now()
         
         # Format the label
         labels.append(slot_start.strftime(chart_format))

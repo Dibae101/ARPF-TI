@@ -249,3 +249,54 @@ class AlertSystem:
 
 # Create a singleton instance
 alert_system = AlertSystem()
+
+# Create a wrapper function to make it easier to use the alert system
+def create_alert(title, description, severity="medium", source="system", source_id=None, related_object=None, source_ip=None):
+    """
+    Create an alert and send notifications.
+    
+    Args:
+        title: The alert title
+        description: The alert description
+        severity: Alert severity (low, medium, high, critical)
+        source: The source of the alert (e.g., 'waf', 'ai', 'system')
+        source_id: An identifier for the source object
+        related_object: A Django model instance related to this alert
+        source_ip: The source IP address if applicable
+    
+    Returns:
+        The created Alert object or None if creation failed
+    """
+    try:
+        # Determine alert type based on source
+        alert_type_map = {
+            'waf': 'rule_match',
+            'ai': 'ai_detection',
+            'system': 'system',
+            'manual': 'manual'
+        }
+        alert_type = alert_type_map.get(source, 'other')
+        
+        # Extract triggered rule if available
+        triggered_rule = None
+        related_logs = None
+        
+        # Handle special case for WAF rule matches
+        if source == 'waf' and related_object:
+            if hasattr(related_object, 'matched_rule') and related_object.matched_rule:
+                triggered_rule = related_object.matched_rule
+            related_logs = [related_object]
+        
+        # Create the alert
+        return AlertSystem.create_alert(
+            alert_type=alert_type,
+            severity=severity,
+            title=title,
+            description=description,
+            source_ip=source_ip,
+            triggered_rule=triggered_rule,
+            related_logs=related_logs
+        )
+    except Exception as e:
+        logger.error(f"Error creating alert: {str(e)}")
+        return None

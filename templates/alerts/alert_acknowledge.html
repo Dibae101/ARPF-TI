@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <h1 class="text-2xl font-semibold mb-6">Acknowledge Alert #{{ alert.id }}</h1>
-    
+
     <div class="bg-white shadow-md rounded-lg p-6 mb-6">
         <h2 class="text-xl font-semibold mb-2">{{ alert.title }}</h2>
         <div class="mb-4">
@@ -28,7 +28,7 @@
         <p class="text-sm text-gray-600">Source IP: {{ alert.source_ip }}</p>
         {% endif %}
     </div>
-    
+
     <div class="bg-white shadow-md rounded-lg p-6">
         <p class="mb-4">Are you sure you want to acknowledge this alert?</p>
         <form method="post">
@@ -37,7 +37,8 @@
                 <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                     Acknowledge
                 </button>
-                <a href="{% url 'alerts:alert_detail' alert.id %}" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">
+                <a href="{% url 'alerts:alert_detail' alert.id %}"
+                    class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">
                     Cancel
                 </a>
             </div>

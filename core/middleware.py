@@ -3,12 +3,21 @@ import time
 import logging
 import re
 import socket
+import ipaddress
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from .models import Rule, RequestLog, ProxyConfig
 from threat_intelligence.integrations.gemini_connector import GeminiConnector
+
+# Import the alert system
+try:
+    from alerts.alert_system import create_alert
+    ALERTS_ENABLED = True
+except ImportError:
+    ALERTS_ENABLED = False
+    logging.warning("Alerts app not installed or configured. Alert functionality disabled.")
 
 logger = logging.getLogger('arpf_ti')
 
@@ -79,30 +88,76 @@ class RequestLoggerMiddleware(MiddlewareMixin):
     
     def _get_client_ip(self, request):
         """Extract the client IP address from the request."""
+        # Try HTTP_X_FORWARDED_FOR first (most common proxy header)
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
+            # Only get the first address in the chain which is the client's IP
             ip = x_forwarded_for.split(',')[0].strip()
+            logger.debug(f"Using IP from X-Forwarded-For: {ip}")
+            
+        # Try other common proxy headers if X-Forwarded-For isn't present
+        elif request.META.get('HTTP_X_REAL_IP'):
+            ip = request.META.get('HTTP_X_REAL_IP')
+            logger.debug(f"Using IP from X-Real-IP: {ip}")
+            
+        elif request.META.get('HTTP_CLIENT_IP'):
+            ip = request.META.get('HTTP_CLIENT_IP')
+            logger.debug(f"Using IP from Client-IP: {ip}")
+            
+        # Fall back to REMOTE_ADDR if no proxy headers are present
         else:
             ip = request.META.get('REMOTE_ADDR', '')
+            logger.debug(f"Using IP from REMOTE_ADDR: {ip}")
         
         # Check if this IP should be excluded from logging
-        request._excluded_from_logging = ip in self.excluded_ips
-        if request._excluded_from_logging:
+        if ip in self.excluded_ips:
+            request._excluded_from_logging = True
             logger.debug(f"Request from excluded IP: {ip}")
+        else:
+            request._excluded_from_logging = False
         
         return ip
     
     def _check_rule_match(self, rule, request, ip_address):
         """Check if a request matches a rule."""
-        # Remove the duplicate self-block prevention here since it's handled in _evaluate_rules
+        # Logging for debugging
+        logger.debug(f"Checking rule match for type '{rule.rule_type}', pattern '{rule.pattern}', IP '{ip_address}'")
         
-        if rule.rule_type == 'ip':
-            return re.match(rule.pattern, ip_address) is not None
+        # IP or ip_range rule type
+        if rule.rule_type in ['ip', 'ip_range']:
+            try:
+                # Try to interpret the pattern as a CIDR range
+                if '/' in rule.pattern:
+                    network = ipaddress.ip_network(rule.pattern)
+                    ip = ipaddress.ip_address(ip_address)
+                    match = ip in network
+                else:
+                    # Simple string comparison for single IPs
+                    match = ip_address == rule.pattern
+                
+                logger.debug(f"IP match result: {match} for {ip_address} against {rule.pattern}")
+                return match
+            except (ValueError, ipaddress.AddressValueError):
+                # If we can't parse as CIDR, fall back to regex
+                logger.warning(f"Failed to parse IP/range '{rule.pattern}', falling back to regex")
+                return re.match(rule.pattern, ip_address) is not None
         
+        # Country code rule type
         elif rule.rule_type == 'country':
             country_code = self._get_country_code(ip_address)
-            return country_code and re.match(rule.pattern, country_code) is not None
+            if country_code:
+                # Direct string comparison is more reliable than regex for 2-letter codes
+                if rule.pattern == country_code:
+                    match = True
+                else:
+                    # Fall back to regex for more complex patterns
+                    match = re.match(rule.pattern, country_code) is not None
+                
+                logger.debug(f"Country match result: {match} for {country_code} against pattern '{rule.pattern}'")
+                return match
+            return False
         
+        # Handle other rule types similar to before
         elif rule.rule_type == 'user_agent':
             user_agent = request.META.get('HTTP_USER_AGENT', '')
             return re.match(rule.pattern, user_agent) is not None
@@ -129,21 +184,70 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         return False
     
     def _get_country_code(self, ip_address):
-        """Get country code for an IP address using GeoIP cache or service."""
-        # This is a placeholder - in a real implementation, you would:
-        # 1. Check the GeoIPCache model first
-        # 2. If not found, query an external service (like MaxMind GeoIP)
-        # 3. Cache the result
-        # For simplicity, we're returning a dummy value
-        return None
+        """Get country code for an IP address using the IP patterns from our simulator."""
+        # This is a simplified implementation that maps IPs to countries based on our simulation patterns
+        # In a production environment, you'd use GeoIP2 or a similar service
+        
+        # Map from our simulation data in COUNTRY_IP_RANGES
+        country_ranges = {
+            'Russia': ['5.188.0.0/16', '31.13.0.0/16', '77.75.0.0/16', '95.213.0.0/16'],
+            'China': ['1.202.0.0/16', '14.204.0.0/16', '27.184.0.0/16', '36.48.0.0/16'],
+            'USA': ['8.0.0.0/16', '104.16.0.0/16', '184.0.0.0/16', '216.58.0.0/16'],
+            'Germany': ['46.0.0.0/16', '78.48.0.0/16', '91.0.0.0/16', '217.0.0.0/16'],
+            'Brazil': ['45.4.0.0/16', '131.255.0.0/16', '177.124.0.0/16', '187.1.0.0/16'],
+            'India': ['14.139.0.0/16', '27.56.0.0/16', '59.144.0.0/16', '115.240.0.0/16'],
+            'UK': ['5.148.0.0/16', '51.68.0.0/16', '82.132.0.0/16', '109.170.0.0/16'],
+            'Australia': ['1.120.0.0/16', '27.121.0.0/16', '49.176.0.0/16', '101.0.0.0/16'],
+            'Nigeria': ['41.58.0.0/16', '41.184.0.0/16', '105.112.0.0/16', '154.120.0.0/16'],
+            'North Korea': ['175.45.176.0/24', '210.52.109.0/24'],
+            'Iran': ['2.144.0.0/16', '5.160.0.0/16', '37.156.0.0/16', '91.108.0.0/16']
+        }
+        
+        try:
+            # Parse the IP address
+            ip_obj = None
+            try:
+                ip_obj = ipaddress.ip_address(ip_address)
+            except ValueError:
+                logger.warning(f"Invalid IP address: {ip_address}")
+                return None
+                
+            # Check each country's ranges
+            for country, ip_ranges in country_ranges.items():
+                for ip_range in ip_ranges:
+                    try:
+                        network = ipaddress.ip_network(ip_range)
+                        if ip_obj in network:
+                            # Return country code (2-letter code)
+                            country_codes = {
+                                'Russia': 'RU', 'China': 'CN', 'USA': 'US', 'Germany': 'DE', 
+                                'Brazil': 'BR', 'India': 'IN', 'UK': 'GB', 'Australia': 'AU', 
+                                'Nigeria': 'NG', 'North Korea': 'KP', 'Iran': 'IR'
+                            }
+                            country_code = country_codes.get(country, 'XX')
+                            logger.debug(f"Determined country code {country_code} for IP {ip_address}")
+                            return country_code
+                    except ValueError:
+                        logger.warning(f"Invalid IP range: {ip_range}")
+                        continue
+                        
+            # Not found in any known range
+            logger.debug(f"No country code found for IP {ip_address}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error determining country for IP {ip_address}: {str(e)}")
+            return None
     
     def _evaluate_rules(self, request, ip_address):
         """Evaluate all rules against the request."""
+        logger.debug(f"Evaluating rules for request from {ip_address}")
         for rule in self.active_rules:
             if self._check_rule_match(rule, request, ip_address):
-                # If the rule is a block rule and the source IP matches the rule's IP pattern,
-                # we should not block the request as this would lock out the admin
-                if rule.rule_type == 'ip' and rule.action == 'block' and ip_address == '127.0.0.1':
+                logger.info(f"Rule match: {rule.name} ({rule.rule_type}:{rule.pattern}) matched for IP {ip_address}")
+                
+                # Special handling for localhost to prevent lockout
+                if rule.rule_type in ['ip', 'ip_range'] and rule.action == 'block' and ip_address == '127.0.0.1':
                     logger.warning(f"Detected self-block attempt: Localhost IP {ip_address} matches block rule {rule.name} ({rule.pattern}). Allowing access.")
                     # For localhost (127.0.0.1), we'll always allow access regardless of rules
                     # Create a modified copy of the rule with action set to 'allow'
@@ -158,7 +262,12 @@ class RequestLoggerMiddleware(MiddlewareMixin):
                         description=f"Auto-modified from {rule.action} to allow for self-access: {rule.description}"
                     )
                     return modified_rule
+                
+                # IMPORTANT FIX: Always enforce all rules, not just block rules
+                # This ensures alert rules also trigger correctly
                 return rule
+                
+        logger.debug(f"No rules matched for IP {ip_address}")
         return None
     
     def _create_log_entry(self, request, ip_address, matched_rule, action_taken, start_time, response=None):
@@ -226,6 +335,11 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         self._load_rules()
         
         ip_address = self._get_client_ip(request)
+        country_code = self._get_country_code(ip_address)
+        
+        # Add debug logging to help with troubleshooting
+        if country_code:
+            logger.info(f"Request from IP {ip_address} detected as country code {country_code}")
         
         # Skip rule evaluation and AI analysis for excluded IPs
         if hasattr(request, '_excluded_from_logging') and request._excluded_from_logging:
@@ -278,7 +392,11 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         
         # Handle traditional rule-based detections if no AI block
         if matched_rule and not ai_threat_detected:
+            logger.info(f"Rule matched: {matched_rule.name} with action '{matched_rule.action}' for IP {ip_address}")
+            
             if matched_rule.action == 'block':
+                logger.warning(f"Blocking request from IP {ip_address} due to rule: {matched_rule.name}")
+                
                 # Create log entry for blocked request
                 log_entry = self._create_log_entry(
                     request, ip_address, matched_rule, 'block', start_time
@@ -294,11 +412,14 @@ class RequestLoggerMiddleware(MiddlewareMixin):
                 return self._create_block_response(matched_rule)
             
             elif matched_rule.action == 'alert':
+                logger.info(f"Alerting for request from IP {ip_address} due to rule: {matched_rule.name}")
+                
                 # Allow request but create an alert
                 log_entry = self._create_log_entry(
                     request, ip_address, matched_rule, 'alert', start_time
                 )
-                # Alert will be created after response in process_response
+                # Create alert
+                self._create_alert_if_needed(log_entry, matched_rule)
         
         # For requests that aren't blocked, continue processing
         # Actual logging will happen in process_response
@@ -365,16 +486,21 @@ class RequestLoggerMiddleware(MiddlewareMixin):
             # Add AI analysis information to the log entry if available
             ai_analysis = getattr(request, '_ai_analysis', None)
             if log_entry and ai_analysis:
-                # Store AI analysis data in the extra_data field
-                extra_data = log_entry.extra_data or {}
-                extra_data['ai_analysis'] = {
-                    'attack_type': ai_analysis.get('attack_type', 'unknown'),
-                    'confidence': ai_analysis.get('confidence', 0),
-                    'explanation': ai_analysis.get('explanation', ''),
-                    'engine': 'gemini',
-                }
-                log_entry.extra_data = extra_data
-                log_entry.save()
+                try:
+                    # Handle the case where extra_data might not exist
+                    if not hasattr(log_entry, 'extra_data') or log_entry.extra_data is None:
+                        log_entry.extra_data = {}
+                    
+                    # Store AI analysis data in the extra_data field
+                    log_entry.extra_data['ai_analysis'] = {
+                        'attack_type': ai_analysis.get('attack_type', 'unknown'),
+                        'confidence': ai_analysis.get('confidence', 0),
+                        'explanation': ai_analysis.get('explanation', ''),
+                        'engine': 'gemini',
+                    }
+                    log_entry.save()
+                except Exception as e:
+                    logger.error(f"Error updating log entry with AI analysis: {str(e)}")
             
             # Create alert if needed
             if matched_rule and matched_rule.action == 'alert':
@@ -394,6 +520,40 @@ class RequestLoggerMiddleware(MiddlewareMixin):
                 self._create_alert_if_needed(log_entry, ai_rule)
         
         return response
+    
+    def _create_alert_if_needed(self, log_entry, rule):
+        """Create an alert if the alerts app is enabled."""
+        if not log_entry:
+            return
+            
+        if ALERTS_ENABLED:
+            try:
+                # Determine alert severity based on rule action
+                severity = 'high' if rule.action == 'block' else 'medium'
+                
+                # Create alert
+                create_alert(
+                    title=f"{rule.action.title()} - {rule.name}",
+                    message=f"Rule triggered for IP {log_entry.source_ip} on path {log_entry.path}",
+                    source="WAF",
+                    severity=severity,
+                    source_id=str(rule.id) if hasattr(rule, 'id') and rule.id else "no_id",
+                    details={
+                        'rule_name': rule.name,
+                        'rule_type': rule.rule_type,
+                        'pattern': rule.pattern,
+                        'action': rule.action,
+                        'ip_address': log_entry.source_ip,
+                        'path': log_entry.path,
+                        'method': log_entry.method,
+                        'user_agent': log_entry.user_agent,
+                        'log_entry_id': log_entry.id
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Error creating alert: {str(e)}")
+        else:
+            logger.debug("Alerts functionality is disabled. No alert created.")
 
 
 class ReverseProxyMiddleware(MiddlewareMixin):

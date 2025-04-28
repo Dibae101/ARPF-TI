@@ -11,21 +11,23 @@
   <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
     <form class="space-y-6" method="POST">
       {% csrf_token %}
-      
+
       {% if messages %}
       <div class="mb-4">
         {% for message in messages %}
-        <div class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-3 rounded-md text-sm">
+        <div
+          class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-3 rounded-md text-sm">
           {{ message }}
         </div>
         {% endfor %}
       </div>
       {% endif %}
-      
+
       <div>
         <label for="id_username" class="block text-sm font-medium leading-6 text-gray-900">Username</label>
         <div class="mt-2">
-          <input id="id_username" name="username" type="text" autocomplete="username" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
+          <input id="id_username" name="username" type="text" autocomplete="username" required
+            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
         </div>
         {% if form.username.errors %}
         <p class="mt-1 text-sm text-red-600">{{ form.username.errors.0 }}</p>
@@ -36,7 +38,8 @@
       <div>
         <label for="id_email" class="block text-sm font-medium leading-6 text-gray-900">Email</label>
         <div class="mt-2">
-          <input id="id_email" name="email" type="email" autocomplete="email" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
+          <input id="id_email" name="email" type="email" autocomplete="email" required
+            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
         </div>
         {% if form.email.errors %}
         <p class="mt-1 text-sm text-red-600">{{ form.email.errors.0 }}</p>
@@ -46,7 +49,8 @@
       <div>
         <label for="id_password1" class="block text-sm font-medium leading-6 text-gray-900">Password</label>
         <div class="mt-2">
-          <input id="id_password1" name="password1" type="password" autocomplete="new-password" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
+          <input id="id_password1" name="password1" type="password" autocomplete="new-password" required
+            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
         </div>
         {% if form.password1.errors %}
         <p class="mt-1 text-sm text-red-600">{{ form.password1.errors.0 }}</p>
@@ -57,7 +61,8 @@
       <div>
         <label for="id_password2" class="block text-sm font-medium leading-6 text-gray-900">Confirm Password</label>
         <div class="mt-2">
-          <input id="id_password2" name="password2" type="password" autocomplete="new-password" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
+          <input id="id_password2" name="password2" type="password" autocomplete="new-password" required
+            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-2">
         </div>
         {% if form.password2.errors %}
         <p class="mt-1 text-sm text-red-600">{{ form.password2.errors.0 }}</p>
@@ -65,12 +70,15 @@
       </div>
 
       <div>
-        <button type="submit" class="flex w-full justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">Sign up</button>
+        <button type="submit"
+          class="flex w-full justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">Sign
+          up</button>
       </div>
     </form>
 
     <p class="mt-10 text-center text-sm text-gray-500">
-      Already have an account? <a href="{% url 'login' %}" class="font-semibold leading-6 text-blue-600 hover:text-blue-500">Sign in</a>
+      Already have an account? <a href="{% url 'login' %}"
+        class="font-semibold leading-6 text-blue-600 hover:text-blue-500">Sign in</a>
     </p>
   </div>
 </div>

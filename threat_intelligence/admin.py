@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ThreatIntelSource, ThreatIntelEntry, AIClassifierModel
+from .models import ThreatIntelSource, ThreatIntelEntry, SuggestedFirewallRule
 
 @admin.register(ThreatIntelSource)
 class ThreatIntelSourceAdmin(admin.ModelAdmin):
@@ -19,10 +19,10 @@ class ThreatIntelEntryAdmin(admin.ModelAdmin):
     ordering = ('-last_seen',)
 
 
-@admin.register(AIClassifierModel)
-class AIClassifierModelAdmin(admin.ModelAdmin):
-    list_display = ('name', 'model_type', 'is_active', 'accuracy', 'updated_at')
-    list_filter = ('model_type', 'is_active')
-    search_fields = ('name', 'description', 'file_path')
-    readonly_fields = ('created_at', 'updated_at')
-    ordering = ('-updated_at',)
+@admin.register(SuggestedFirewallRule)
+class SuggestedFirewallRuleAdmin(admin.ModelAdmin):
+    list_display = ('rule_type', 'pattern', 'status', 'confidence', 'created_at')
+    list_filter = ('rule_type', 'status')
+    search_fields = ('pattern', 'description')
+    readonly_fields = ('created_at', 'reviewed_at')
+    ordering = ('-created_at',)
