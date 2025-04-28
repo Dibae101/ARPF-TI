@@ -12,13 +12,6 @@ plotly>=5.14.0
 django-crispy-forms>=2.0
 whitenoise>=6.4.0
 gunicorn>=21.0.0
-# Llama model dependencies
-transformers>=4.30.0
-torch>=2.0.0
-sentencepiece>=0.1.99
-accelerate>=0.20.0
-bitsandbytes>=0.40.0  # For 4-bit quantization
-safetensors>=0.3.1
 # TAXII/STIX dependencies
 taxii2-client>=2.3.0
 stix2>=3.0.1

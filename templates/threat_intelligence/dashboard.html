@@ -32,9 +32,6 @@
         <a href="{% url 'threat_intelligence:source_add' %}" class="btn-primary">
             <i class="fas fa-plus mr-2"></i> Add Source
         </a>
-        <a href="{% url 'threat_intelligence:ai_models_list' %}" class="btn-secondary">
-            <i class="fas fa-brain mr-2"></i> AI Models
-        </a>
     </div>
 </div>
 
@@ -76,24 +73,6 @@
         </div>
     </div>
 
-    <!-- AI Models -->
-    <div class="bg-white p-6 rounded-lg shadow-md">
-        <div class="flex justify-between items-start">
-            <div>
-                <p class="text-sm font-medium text-gray-500">AI Models</p>
-                <p class="text-2xl font-bold text-gray-900 mt-1">{{ ai_models_count }}</p>
-            </div>
-            <div class="p-3 bg-purple-100 rounded-full text-purple-600">
-                <i class="fas fa-brain"></i>
-            </div>
-        </div>
-        <div class="mt-4">
-            <p class="text-xs text-gray-500">
-                {{ active_models_count }} active models
-            </p>
-        </div>
-    </div>
-
     <!-- Recent Updates -->
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-start">
@@ -111,12 +90,77 @@
             </p>
         </div>
     </div>
+    
+    <!-- Gemini AI Active -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Gemini AI</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">Active</p>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-full text-purple-600 pulse-animation">
+                <i class="fas fa-brain"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-xs text-gray-500">
+                Learning from network traffic
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Gemini AI Insights -->
+<div class="grid grid-cols-1 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="p-2 bg-white bg-opacity-20 rounded-full mr-3">
+                        <i class="fas fa-brain text-white"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white">AI Assistant</h3>
+                </div>
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    Active
+                </span>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="mb-4">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">How Gemini AI Works:</h4>
+                <ul class="space-y-2 text-sm text-gray-700">
+                    <li class="flex items-start">
+                        <i class="fas fa-chart-line text-purple-600 mt-1 mr-2"></i>
+                        <span><strong>Continuous Learning:</strong> Analyzes patterns in network traffic and threat data to identify anomalies and potential threats.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-shield-alt text-purple-600 mt-1 mr-2"></i>
+                        <span><strong>Adaptive Defense:</strong> Evolves defense strategies based on observed attack patterns and emerging threats.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-network-wired text-purple-600 mt-1 mr-2"></i>
+                        <span><strong>Traffic Analysis:</strong> Examines requests, responses, and data flows to detect suspicious activities.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-cogs text-purple-600 mt-1 mr-2"></i>
+                        <span><strong>Automated Response:</strong> Suggests or implements countermeasures for detected threats in real-time.</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="pt-4 border-t border-gray-200">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500">Last model update: April 15, 2025</span>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Main Dashboard Content -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+<div class="grid grid-cols-1 gap-6 mb-6">
     <!-- Intelligence Sources -->
-    <div class="lg:col-span-2">
+    <div>
         <div class="card">
             <div class="card-header flex justify-between items-center">
                 <span>Threat Intelligence Sources</span>
@@ -184,42 +228,14 @@
             </div>
         </div>
     </div>
-
-    <!-- Entry Types Distribution -->
-    <div class="lg:col-span-1">
-        <div class="card mb-6">
-            <div class="card-header">
-                Entry Types Distribution
-            </div>
-            <div class="card-body">
-                <div class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                    <!-- Placeholder for chart - will be replaced with actual chart in production -->
-                    <p class="text-gray-400">Distribution chart will be displayed here</p>
-                </div>
-                <div class="mt-4">
-                    <ul class="space-y-2">
-                        {% for entry_type in entry_types_summary %}
-                            <li class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">{{ entry_type.display_name }}</span>
-                                <div class="flex items-center">
-                                    <span class="text-sm font-medium text-gray-900 mr-2">{{ entry_type.count }}</span>
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {% if entry_type.type == 'ip' %}bg-blue-100 text-blue-800{% elif entry_type.type == 'domain' %}bg-green-100 text-green-800{% elif entry_type.type == 'url' %}bg-purple-100 text-purple-800{% elif entry_type.type == 'file_hash' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                                        {{ entry_type.percentage }}%
-                                    </span>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Recent Entries -->
 <div class="card">
     <div class="card-header flex justify-between items-center">
-        <span>Recent Threat Intelligence Entries</span>
+        <div class="flex items-center">
+            <span>Recent Threat Intelligence Entries</span>
+        </div>
         <a href="{% url 'threat_intelligence:entries_list' %}" class="text-sm text-blue-600 hover:text-blue-800">View all</a>
     </div>
     <div class="card-body p-0">
@@ -281,4 +297,23 @@
         </div>
     </div>
 </div>
+
+<!-- Add pulse animation for the Gemini AI icon -->
+<style>
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.4);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(147, 51, 234, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+        }
+    }
+</style>
 {% endblock %}

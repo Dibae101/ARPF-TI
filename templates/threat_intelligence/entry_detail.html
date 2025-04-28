@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}Threat Intelligence Entry - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'threat_intelligence:index' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Threat Intelligence</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'threat_intelligence:entries_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Entries</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">Entry Details</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Threat Intelligence Entry</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ entry.value }}</p>
+    </div>
+    <div class="flex space-x-3">
+        <a href="{% url 'threat_intelligence:entries_list' %}" class="btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Entries
+        </a>
+    </div>
+</div>
+
+<!-- Entry Information -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Main Entry Details -->
+    <div class="md:col-span-2 bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Entry Information</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Value</dt>
+                    <dd class="mt-1 text-sm text-gray-900 font-mono break-all">{{ entry.value }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Entry Type</dt>
+                    <dd class="mt-1 text-sm">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {{ entry.get_entry_type_display }}
+                        </span>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Source</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        <a href="{% url 'threat_intelligence:source_detail' source_id=entry.source.id %}" class="text-blue-600 hover:text-blue-900">
+                            {{ entry.source.name }}
+                        </a>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Status</dt>
+                    <dd class="mt-1 text-sm">
+                        {% if entry.is_active %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
+                            </span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                Inactive
+                            </span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Category</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ entry.category|default:"N/A" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Confidence Score</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ entry.confidence_score }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">First Seen</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ entry.first_seen|date:"F j, Y H:i" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Last Seen</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ entry.last_seen|date:"F j, Y H:i" }}</dd>
+                </div>
+                
+                {% if entry.stix_id %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">STIX ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900 font-mono">{{ entry.stix_id }}</dd>
+                </div>
+                {% endif %}
+                
+                {% if entry.misp_event_id %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">MISP Event ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900 font-mono">{{ entry.misp_event_id }}</dd>
+                </div>
+                {% endif %}
+                
+                {% if entry.misp_attribute_id %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">MISP Attribute ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900 font-mono">{{ entry.misp_attribute_id }}</dd>
+                </div>
+                {% endif %}
+
+                {% if entry.tlp %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">TLP Level</dt>
+                    <dd class="mt-1 text-sm">
+                        {% if entry.tlp == 'RED' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                TLP:RED
+                            </span>
+                        {% elif entry.tlp == 'AMBER' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                TLP:AMBER
+                            </span>
+                        {% elif entry.tlp == 'GREEN' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                TLP:GREEN
+                            </span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                TLP:WHITE
+                            </span>
+                        {% endif %}
+                    </dd>
+                </div>
+                {% endif %}
+            </dl>
+
+            {% if entry.kill_chain_phases %}
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Kill Chain Phases</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for phase in entry.kill_chain_phases %}
+                    <span class="px-2 py-1 text-xs font-semibold rounded-md bg-purple-100 text-purple-800">
+                        {{ phase }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if entry.metadata %}
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Metadata</h3>
+                <div class="bg-gray-50 p-4 rounded-lg overflow-x-auto">
+                    <pre class="text-xs text-gray-700 font-mono">{{ entry.metadata }}</pre>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Actions Panel -->
+    <div class="space-y-6">
+        <!-- Quick Stats -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Actions</h2>
+            </div>
+            <div class="p-6">
+                <ul class="divide-y divide-gray-200">
+                    <li class="py-3 flex justify-between items-center">
+                        <span class="text-sm text-gray-900">View Source</span>
+                        <a href="{% url 'threat_intelligence:source_detail' source_id=entry.source.id %}" class="text-blue-600 hover:text-blue-900">
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </li>
+                    <li class="py-3 flex justify-between items-center">
+                        <span class="text-sm text-gray-900">Create Firewall Rule</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-900">
+                            <i class="fas fa-shield-alt"></i>
+                        </a>
+                    </li>
+                    <li class="py-3 flex justify-between items-center">
+                        <span class="text-sm text-gray-900">Mark as Inactive</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-900">
+                            <i class="fas fa-toggle-off"></i>
+                        </a>
+                    </li>
+                    <li class="py-3 flex justify-between items-center">
+                        <span class="text-sm text-red-600">Delete Entry</span>
+                        <a href="#" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Related Information -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Related Information</h2>
+            </div>
+            <div class="p-6">
+                <div class="text-sm text-gray-600">
+                    {% if related_entries %}
+                        <ul class="divide-y divide-gray-200">
+                        {% for related in related_entries %}
+                            <li class="py-2">
+                                <a href="{% url 'threat_intelligence:entry_detail' entry_id=related.id %}" class="text-blue-600 hover:text-blue-900">
+                                    {{ related.value }} ({{ related.get_entry_type_display }})
+                                </a>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No related entries found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,4 +1,8 @@
 from django.db import models
+from django.utils import timezone
+import uuid
+import ipaddress
+import re
 import json
 
 class ThreatIntelSource(models.Model):
@@ -178,3 +182,156 @@ class AIClassifierModel(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.get_model_type_display()})"
+
+
+class FirewallRule(models.Model):
+    """Model representing a firewall rule for blocking or allowing traffic."""
+    
+    # Rule types
+    TYPE_IP = 'ip'
+    TYPE_IP_RANGE = 'ip_range'
+    TYPE_COUNTRY = 'country'
+    TYPE_PORT = 'port'
+    TYPE_PORT_RANGE = 'port_range'
+    TYPE_PROTOCOL = 'protocol'
+    TYPE_CUSTOM = 'custom'
+    
+    RULE_TYPES = [
+        (TYPE_IP, 'Single IP Address'),
+        (TYPE_IP_RANGE, 'IP Address Range/CIDR'),
+        (TYPE_COUNTRY, 'Country Code'),
+        (TYPE_PORT, 'Single Port'),
+        (TYPE_PORT_RANGE, 'Port Range'),
+        (TYPE_PROTOCOL, 'Protocol'),
+        (TYPE_CUSTOM, 'Custom Expression'),
+    ]
+    
+    # Actions
+    ACTION_BLOCK = 'block'
+    ACTION_ALLOW = 'allow'
+    ACTION_LOG = 'log'
+    
+    ACTIONS = [
+        (ACTION_BLOCK, 'Block'),
+        (ACTION_ALLOW, 'Allow'),
+        (ACTION_LOG, 'Log Only'),
+    ]
+    
+    # Common protocols
+    PROTOCOL_TCP = 'tcp'
+    PROTOCOL_UDP = 'udp'
+    PROTOCOL_ICMP = 'icmp'
+    PROTOCOL_HTTP = 'http'
+    PROTOCOL_HTTPS = 'https'
+    PROTOCOL_FTP = 'ftp'
+    PROTOCOL_SSH = 'ssh'
+    PROTOCOL_SMTP = 'smtp'
+    PROTOCOL_DNS = 'dns'
+    
+    PROTOCOLS = [
+        (PROTOCOL_TCP, 'TCP'),
+        (PROTOCOL_UDP, 'UDP'),
+        (PROTOCOL_ICMP, 'ICMP'),
+        (PROTOCOL_HTTP, 'HTTP'),
+        (PROTOCOL_HTTPS, 'HTTPS'),
+        (PROTOCOL_FTP, 'FTP'),
+        (PROTOCOL_SSH, 'SSH'),
+        (PROTOCOL_SMTP, 'SMTP'),
+        (PROTOCOL_DNS, 'DNS'),
+    ]
+    
+    # Rule categories
+    CATEGORY_SECURITY = 'security'
+    CATEGORY_COMPLIANCE = 'compliance'
+    CATEGORY_TRAFFIC = 'traffic'
+    CATEGORY_CUSTOM = 'custom'
+    
+    CATEGORIES = [
+        (CATEGORY_SECURITY, 'Security'),
+        (CATEGORY_COMPLIANCE, 'Compliance'),
+        (CATEGORY_TRAFFIC, 'Traffic Management'),
+        (CATEGORY_CUSTOM, 'Custom'),
+    ]
+    
+    # Direction of traffic
+    DIRECTION_INBOUND = 'inbound'
+    DIRECTION_OUTBOUND = 'outbound'
+    DIRECTION_BOTH = 'both'
+    
+    DIRECTIONS = [
+        (DIRECTION_INBOUND, 'Inbound'),
+        (DIRECTION_OUTBOUND, 'Outbound'),
+        (DIRECTION_BOTH, 'Both Directions'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    rule_type = models.CharField(max_length=20, choices=RULE_TYPES)
+    value = models.CharField(max_length=255, help_text="IP, CIDR, country code, etc.")
+    action = models.CharField(max_length=20, choices=ACTIONS, default=ACTION_BLOCK)
+    category = models.CharField(max_length=20, choices=CATEGORIES, default=CATEGORY_SECURITY)
+    direction = models.CharField(max_length=20, choices=DIRECTIONS, default=DIRECTION_INBOUND)
+    protocol = models.CharField(max_length=20, choices=PROTOCOLS, blank=True, null=True)
+    port = models.IntegerField(blank=True, null=True)
+    port_end = models.IntegerField(blank=True, null=True, help_text="End port for range")
+    priority = models.IntegerField(default=100, help_text="Lower number = higher priority")
+    is_active = models.BooleanField(default=True)
+    is_temporary = models.BooleanField(default=False)
+    expiry_date = models.DateTimeField(blank=True, null=True)
+    source = models.CharField(max_length=255, blank=True, null=True, help_text="Source of this rule (e.g. manual, auto, api)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['priority', 'created_at']
+        verbose_name = "Firewall Rule"
+        verbose_name_plural = "Firewall Rules"
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_action_display()} {self.get_rule_type_display()})"
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        
+        # Validate IP addresses
+        if self.rule_type == self.TYPE_IP:
+            try:
+                ipaddress.ip_address(self.value)
+            except ValueError:
+                raise ValidationError({'value': 'Invalid IP address format'})
+        
+        # Validate IP ranges/CIDR
+        elif self.rule_type == self.TYPE_IP_RANGE:
+            try:
+                ipaddress.ip_network(self.value, strict=False)
+            except ValueError:
+                raise ValidationError({'value': 'Invalid IP range or CIDR format'})
+        
+        # Validate country codes (ISO 3166-1 alpha-2)
+        elif self.rule_type == self.TYPE_COUNTRY:
+            if not re.match(r'^[A-Z]{2}$', self.value):
+                raise ValidationError({'value': 'Country code must be a 2-letter ISO code (e.g., US, GB)'})
+        
+        # Validate port ranges
+        elif self.rule_type == self.TYPE_PORT_RANGE:
+            if self.port is None or self.port_end is None:
+                raise ValidationError('Both start and end ports are required for port ranges')
+            if self.port < 1 or self.port > 65535 or self.port_end < 1 or self.port_end > 65535:
+                raise ValidationError('Ports must be between 1 and 65535')
+            if self.port > self.port_end:
+                raise ValidationError('Start port must be less than or equal to end port')
+    
+    def is_expired(self):
+        """Check if a temporary rule has expired."""
+        if not self.is_temporary:
+            return False
+        if self.expiry_date is None:
+            return False
+        return timezone.now() > self.expiry_date
+    
+    @classmethod
+    def get_active_rules(cls):
+        """Return all active, non-expired rules."""
+        active_rules = cls.objects.filter(is_active=True)
+        return [rule for rule in active_rules if not rule.is_expired()]

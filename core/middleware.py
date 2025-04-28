@@ -8,13 +8,15 @@ from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from .models import Rule, RequestLog, ProxyConfig
+from threat_intelligence.integrations.gemini_connector import GeminiConnector
 
 logger = logging.getLogger('arpf_ti')
 
 class RequestLoggerMiddleware(MiddlewareMixin):
     """
     Middleware for logging HTTP requests and applying firewall rules.
-    This is the core of the ARPF-TI WAF functionality.
+    This is the core of the ARPF-TI WAF functionality with integrated
+    Gemini-powered AI threat analysis.
     """
     
     def __init__(self, get_response=None):
@@ -32,6 +34,13 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         if getattr(settings, 'EXCLUDE_HOST_IPS', True):
             self.excluded_ips.update(self._get_host_ips())
         logger.info(f"Excluded IPs from logging: {', '.join(self.excluded_ips)}")
+        
+        # Initialize Gemini AI connector
+        self.enable_gemini = getattr(settings, 'ENABLE_GEMINI', True)
+        self.gemini = GeminiConnector() if self.enable_gemini else None
+        if self.enable_gemini:
+            logger.info("Gemini AI threat detection initialized")
+        
         # Add this attribute for Django compatibility
         self.async_mode = False # Ensure this is correctly indented
     
@@ -211,22 +220,64 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         }, status=403)
     
     def process_request(self, request):
-        """Process the incoming request and apply firewall rules."""
+        """Process the incoming request and apply firewall rules and AI threat detection."""
         start_time = time.time()
         request._request_start_time = start_time
         self._load_rules()
         
         ip_address = self._get_client_ip(request)
         
-        # Skip rule evaluation for excluded IPs
+        # Skip rule evaluation and AI analysis for excluded IPs
         if hasattr(request, '_excluded_from_logging') and request._excluded_from_logging:
             logger.debug(f"Skipping rule evaluation for excluded IP: {ip_address}")
             return None
         
+        # First apply traditional rule-based detection
         matched_rule = self._evaluate_rules(request, ip_address)
         request._matched_rule = matched_rule
         
-        if matched_rule:
+        # Apply Gemini AI threat detection if enabled
+        ai_threat_detected = False
+        if self.enable_gemini and self.gemini:
+            ai_result = self._analyze_request_with_gemini(request, ip_address)
+            request._ai_analysis = ai_result
+            
+            # If AI detects a high-confidence threat, block the request
+            if ai_result and ai_result.get('recommended_action') == 'block' and ai_result.get('confidence', 0) >= 75:
+                ai_threat_detected = True
+                logger.warning(f"Gemini AI detected high-confidence threat from {ip_address}: {ai_result.get('attack_type')}")
+                
+                # Create a synthetic rule for logging purposes
+                ai_rule = Rule(
+                    name=f"Gemini AI Detection: {ai_result.get('attack_type', 'Unknown Threat')}",
+                    rule_type='ai',
+                    pattern='ai_detection',
+                    action='block',
+                    is_active=True,
+                    description=f"AI-detected threat: {ai_result.get('explanation', 'No explanation provided')}"
+                )
+                
+                # Create log entry for blocked request
+                log_entry = self._create_log_entry(
+                    request, ip_address, ai_rule, 'block', start_time
+                )
+                
+                # Create alert for AI-detected threat
+                if log_entry:
+                    self._create_alert_if_needed(log_entry, ai_rule)
+                
+                # Mark as already logged
+                request._request_already_logged = True
+                
+                # Return block response
+                return JsonResponse({
+                    'error': 'Access Denied',
+                    'message': 'Your request has been blocked by the next-generation AI firewall.',
+                    'reason': ai_result.get('explanation', 'Suspicious activity detected')
+                }, status=403)
+        
+        # Handle traditional rule-based detections if no AI block
+        if matched_rule and not ai_threat_detected:
             if matched_rule.action == 'block':
                 # Create log entry for blocked request
                 log_entry = self._create_log_entry(
@@ -253,8 +304,45 @@ class RequestLoggerMiddleware(MiddlewareMixin):
         # Actual logging will happen in process_response
         return None
     
+    def _analyze_request_with_gemini(self, request, ip_address):
+        """
+        Analyze a request using the Gemini AI for advanced threat detection.
+        
+        Args:
+            request: The HTTP request to analyze
+            ip_address: The client IP address
+            
+        Returns:
+            dict: Analysis results from Gemini, or None if analysis failed
+        """
+        try:
+            # Format request data for analysis
+            request_data = {
+                'source_ip': ip_address,
+                'path': request.path,
+                'method': request.method,
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+                'headers': {}
+            }
+            
+            # Extract headers
+            for key, value in request.META.items():
+                if key.startswith('HTTP_'):
+                    header_name = key[5:].replace('_', '-').title()
+                    request_data['headers'][header_name] = value
+            
+            # Call Gemini for analysis
+            analysis_result = self.gemini.analyze_request(request_data)
+            logger.debug(f"Gemini analysis for {ip_address}: {json.dumps(analysis_result)}")
+            
+            return analysis_result
+            
+        except Exception as e:
+            logger.error(f"Error analyzing request with Gemini: {str(e)}")
+            return None
+    
     def process_response(self, request, response):
-        """Process the response before it's sent back to the client."""
+        """Process the response before it's sent back to the client and include AI analysis in logs."""
         ip_address = self._get_client_ip(request)
         
         # Skip logging for excluded IPs
@@ -267,27 +355,45 @@ class RequestLoggerMiddleware(MiddlewareMixin):
             matched_rule = getattr(request, '_matched_rule', None)
             action = 'allow'  # Default action for requests that don't match any rule
             
+            # Create log entry
             log_entry = self._create_log_entry(
                 request, ip_address, matched_rule, action, 
                 getattr(request, '_request_start_time', time.time()),
                 response
             )
             
+            # Add AI analysis information to the log entry if available
+            ai_analysis = getattr(request, '_ai_analysis', None)
+            if log_entry and ai_analysis:
+                # Store AI analysis data in the extra_data field
+                extra_data = log_entry.extra_data or {}
+                extra_data['ai_analysis'] = {
+                    'attack_type': ai_analysis.get('attack_type', 'unknown'),
+                    'confidence': ai_analysis.get('confidence', 0),
+                    'explanation': ai_analysis.get('explanation', ''),
+                    'engine': 'gemini',
+                }
+                log_entry.extra_data = extra_data
+                log_entry.save()
+            
             # Create alert if needed
             if matched_rule and matched_rule.action == 'alert':
                 self._create_alert_if_needed(log_entry, matched_rule)
+                
+            # Create alert for medium-confidence AI detections that weren't blocked
+            if log_entry and ai_analysis and ai_analysis.get('confidence', 0) >= 50:
+                # Create a synthetic rule for the AI alert
+                ai_rule = Rule(
+                    name=f"Gemini AI Alert: {ai_analysis.get('attack_type', 'Suspicious Activity')}",
+                    rule_type='ai',
+                    pattern='ai_detection',
+                    action='alert',
+                    is_active=True,
+                    description=f"AI-detected suspicious activity: {ai_analysis.get('explanation', 'No explanation provided')}"
+                )
+                self._create_alert_if_needed(log_entry, ai_rule)
         
         return response
-    
-    def _create_alert_if_needed(self, log_entry, rule):
-        """Create an alert based on the log entry and rule."""
-        # If the log entry is None (which happens for localhost requests), skip alert creation
-        if log_entry is None:
-            return
-            
-        # This will be implemented in the alerts app
-        # For now, just log the alert
-        logger.info(f"ALERT: Rule '{rule.name}' matched for {log_entry.source_ip} on {log_entry.path}")
 
 
 class ReverseProxyMiddleware(MiddlewareMixin):

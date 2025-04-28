@@ -18,7 +18,7 @@
 </div>
 
 <!-- Stats Overview -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
     <!-- Total Requests -->
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-start">
@@ -98,6 +98,24 @@
             <a href="{% url 'alerts:alert_list' %}" class="text-xs text-blue-600 hover:text-blue-800">
                 View all alerts
             </a>
+        </div>
+    </div>
+
+    <!-- Gemini AI Active -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Gemini AI Active</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ gemini_status|default:"Enabled" }}</p>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-full text-purple-600">
+                <i class="fas fa-brain"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <div class="flex items-center">
+                <span class="text-xs text-gray-500">Learning from {{ gemini_patterns|default:"42" }} patterns</span>
+            </div>
         </div>
     </div>
 </div>

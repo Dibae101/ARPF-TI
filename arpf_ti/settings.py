@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
 import ast # Add this import
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,7 +21,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-fallback-key-c
 DEBUG = ast.literal_eval(os.environ.get('DJANGO_DEBUG', 'False'))
 
 # Load ALLOWED_HOSTS from environment variable (comma-separated string)
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,3.88.244.164,172.31.26.20,64.130.127.37,54.86.41.201').split(',')
 
 # Application definition
 
@@ -187,6 +191,11 @@ ENABLE_DASHBOARD = True
 # IP logging exclusion settings
 EXCLUDE_HOST_IPS = True  # Auto-detect and exclude the host's own IP addresses
 EXCLUDED_IPS = ['64.130.127.37', '3.88.244.164', '172.31.26.20']  # Manually excluded IPs
+
+# Gemini API Configuration
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+ENABLE_GEMINI = True
 
 # Slack webhook for alerts (optional)
 SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL') # Remove default

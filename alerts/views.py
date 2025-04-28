@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from .models import Alert, AlertNotificationConfig
+import json
+import csv
+from .models import Alert, AlertNotificationConfig, AlertComment
 from .alert_system import alert_system
 
 @login_required
@@ -184,3 +186,104 @@ def notification_config_test(request, config_id):
             messages.error(request, f'Error sending test notification: {str(e)}')
     
     return redirect('alerts:notification_config_list')
+
+@login_required
+def add_comment(request, alert_id):
+    """Add a comment to an alert."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            comment = AlertComment(
+                alert=alert,
+                user=request.user,
+                content=content
+            )
+            comment.save()
+            messages.success(request, 'Comment added successfully.')
+        else:
+            messages.error(request, 'Comment cannot be empty.')
+    
+    return redirect('alerts:alert_detail', alert_id=alert_id)
+
+@login_required
+def mark_as_false_positive(request, alert_id):
+    """Mark an alert as a false positive."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    alert.is_false_positive = True
+    alert.acknowledge(request.user.username)
+    alert.save()
+    
+    # Add a system comment noting this was marked as false positive
+    comment = AlertComment(
+        alert=alert,
+        user=request.user,
+        content="This alert was marked as a false positive."
+    )
+    comment.save()
+    
+    messages.success(request, f'Alert #{alert.id} has been marked as a false positive.')
+    return redirect('alerts:alert_detail', alert_id=alert_id)
+
+@login_required
+def export_alert(request, alert_id):
+    """Export alert data as JSON or CSV."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    format_type = request.GET.get('format', 'json')
+    
+    # Create a dictionary with alert data
+    alert_data = {
+        'id': alert.id,
+        'title': alert.title,
+        'description': alert.description,
+        'alert_type': alert.alert_type,
+        'severity': alert.severity,
+        'source_ip': alert.source_ip,
+        'timestamp': alert.timestamp.isoformat(),
+        'is_acknowledged': alert.is_acknowledged,
+        'acknowledged_by': alert.acknowledged_by,
+        'acknowledged_at': alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
+        'is_false_positive': getattr(alert, 'is_false_positive', False)
+    }
+    
+    # Include comments if they exist
+    comments = []
+    for comment in AlertComment.objects.filter(alert=alert).order_by('created_at'):
+        comments.append({
+            'user': comment.user.username,
+            'content': comment.content,
+            'created_at': comment.created_at.isoformat()
+        })
+    
+    if comments:
+        alert_data['comments'] = comments
+    
+    # Export in the requested format
+    if format_type == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="alert_{alert.id}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Field', 'Value'])
+        
+        # Write alert data
+        for key, value in alert_data.items():
+            if key != 'comments':
+                writer.writerow([key, value])
+        
+        # Write comments if any
+        if comments:
+            writer.writerow([])
+            writer.writerow(['Comments'])
+            writer.writerow(['User', 'Content', 'Created At'])
+            for comment in comments:
+                writer.writerow([comment['user'], comment['content'], comment['created_at']])
+        
+        return response
+    else:
+        # JSON format is the default
+        response = HttpResponse(json.dumps(alert_data, indent=2), content_type='application/json')
+        response['Content-Disposition'] = f'attachment; filename="alert_{alert.id}.json"'
+        return response

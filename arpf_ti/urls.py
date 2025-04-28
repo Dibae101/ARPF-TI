@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from core.views import login_view, logout_view
+from core.views import login_view, logout_view, signup_view
 from django.shortcuts import redirect
 
 def logs_redirect(request):
@@ -32,6 +32,7 @@ urlpatterns = [
     # Authentication URLs
     path('accounts/login/', login_view, name='login'),
     path('accounts/logout/', logout_view, name='logout'),
+    path('accounts/signup/', signup_view, name='signup'),
     
     # Redirect shortcuts
     path('logs/', logs_redirect, name='logs_redirect'),

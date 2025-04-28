@@ -11,10 +11,11 @@ import argparse
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
-# Import test setup function
+# Import and run test setup function immediately
 from tests import setup_django_test_environment
+setup_django_test_environment()
 
-# Import test modules
+# Now import test modules (after Django is configured)
 from tests.threat_intelligence.test_threat_intel import ThreatIntelSourceTests, run_manual_tests as run_ti_manual_tests
 from tests.ai_models.test_ai_models import AIModelTests, AIModelUploadTests, run_manual_tests as run_ai_manual_tests
 from tests.rules.test_rules import RuleTests, run_manual_tests as run_rules_manual_tests
@@ -28,9 +29,6 @@ def main():
                       help='Run manual tests instead of unit tests')
     
     args = parser.parse_args()
-    
-    # Setup Django environment for standalone testing
-    setup_django_test_environment()
     
     if args.manual:
         # Run manual tests

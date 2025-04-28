@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from .models import Rule, RequestLog, ProxyConfig
-from .forms import RuleForm, ProxyConfigForm
+from .forms import RuleForm, ProxyConfigForm, UserRegistrationForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 
@@ -183,6 +183,23 @@ def login_view(request):
     else:
         form = AuthenticationForm()
     return render(request, 'accounts/login.html', {'form': form})
+
+def signup_view(request):
+    """Handle user registration"""
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f"Account created for {username}! You can now log in.")
+            return redirect('login')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        form = UserRegistrationForm()
+    return render(request, 'accounts/signup.html', {'form': form})
 
 def logout_view(request):
     """Handle user logout"""

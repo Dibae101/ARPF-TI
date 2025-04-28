@@ -1,0 +1,729 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Firewall Rule Presets{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Firewall Rule Presets</h1>
+        <a href="{% url 'threat_intelligence:firewall_rules_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Rules
+        </a>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> 
+        These presets offer common firewall rules that you can add to your system with a single click. 
+        Select a category below to view related rule presets.
+    </div>
+
+    <ul class="nav nav-tabs mb-4" id="presetTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="common-tab" data-toggle="tab" href="#common" role="tab">
+                <i class="fas fa-shield-alt"></i> Common Protection
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="country-tab" data-toggle="tab" href="#country" role="tab">
+                <i class="fas fa-globe-americas"></i> Country Blocks
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="ports-tab" data-toggle="tab" href="#ports" role="tab">
+                <i class="fas fa-network-wired"></i> Common Ports
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="attacks-tab" data-toggle="tab" href="#attacks" role="tab">
+                <i class="fas fa-bug"></i> Attack Protection
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="misc-tab" data-toggle="tab" href="#misc" role="tab">
+                <i class="fas fa-cogs"></i> Miscellaneous
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="presetTabsContent">
+        <!-- Common Protection Rules -->
+        <div class="tab-pane fade show active" id="common" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Private IP Ranges</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block traffic from private IP address ranges that should never appear on the public internet.</p>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td><code>10.0.0.0/8</code></td>
+                                        <td>Private network range</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>172.16.0.0/12</code></td>
+                                        <td>Private network range</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>192.168.0.0/16</code></td>
+                                        <td>Private network range</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>169.254.0.0/16</code></td>
+                                        <td>Link-local addresses</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_private_ips">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Bogon IP Addresses</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block traffic from bogon IP addresses (reserved or unallocated IP ranges that should never appear on the internet).</p>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td><code>0.0.0.0/8</code></td>
+                                        <td>Reserved for self-identification</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>127.0.0.0/8</code></td>
+                                        <td>Loopback addresses</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>224.0.0.0/4</code></td>
+                                        <td>Multicast addresses</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>240.0.0.0/4</code></td>
+                                        <td>Reserved for future use</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_bogon_ips">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Known Malicious IPs</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block a list of known malicious IPs gathered from various threat intelligence sources. This preset adds rules for top 10 known attacker IPs.</p>
+                            <div class="alert alert-warning small">
+                                <i class="fas fa-exclamation-triangle"></i> These IPs are updated regularly based on current threat intelligence. The current list was last updated on April 28, 2025.
+                            </div>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_malicious_ips">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Rate Limiting Protection</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Add rate limiting rules to protect against brute force attacks on common services.</p>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td>SSH Brute Force Protection</td>
+                                        <td>Limit SSH connection attempts</td>
+                                    </tr>
+                                    <tr>
+                                        <td>HTTP Flood Protection</td>
+                                        <td>Limit HTTP requests per IP</td>
+                                    </tr>
+                                    <tr>
+                                        <td>SMTP Rate Limiting</td>
+                                        <td>Prevent email flooding</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="rate_limiting">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Country Block Rules -->
+        <div class="tab-pane fade" id="country" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">High-Risk Countries</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block traffic from countries with high rates of cyber attacks based on threat intelligence reports.</p>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Country Code</th>
+                                        <th>Country Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><code>CN</code></td>
+                                        <td>China</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>RU</code></td>
+                                        <td>Russia</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>KP</code></td>
+                                        <td>North Korea</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>IR</code></td>
+                                        <td>Iran</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>NG</code></td>
+                                        <td>Nigeria</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_high_risk_countries">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Custom Country Block</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Select specific countries you want to block traffic from.</p>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="custom_country_block">
+                                
+                                <div class="form-group">
+                                    <select class="form-control custom-select" name="countries" multiple size="10">
+                                        <option value="AF">Afghanistan</option>
+                                        <option value="AL">Albania</option>
+                                        <option value="DZ">Algeria</option>
+                                        <!-- More countries would be listed here -->
+                                        <option value="ZW">Zimbabwe</option>
+                                    </select>
+                                    <small class="form-text text-muted">
+                                        Hold Ctrl/Cmd to select multiple countries
+                                    </small>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Create Rules for Selected Countries
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Geolocation Whitelisting</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Only allow traffic from specific countries and block all others.</p>
+                            <div class="alert alert-warning small">
+                                <i class="fas fa-exclamation-triangle"></i> Be careful with this preset! It will block all traffic except from the countries you select. This could lock you out if your country isn't included.
+                            </div>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="geo_whitelist">
+                                
+                                <div class="form-group">
+                                    <select class="form-control custom-select" name="whitelist_countries" multiple size="5">
+                                        <option value="US">United States</option>
+                                        <option value="CA">Canada</option>
+                                        <option value="GB">United Kingdom</option>
+                                        <option value="AU">Australia</option>
+                                        <option value="NZ">New Zealand</option>
+                                        <!-- More countries could be listed here -->
+                                    </select>
+                                    <small class="form-text text-muted">
+                                        Hold Ctrl/Cmd to select multiple countries
+                                    </small>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-plus"></i> Create Whitelist Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Common Ports Rules -->
+        <div class="tab-pane fade" id="ports" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Commonly Exploited Ports</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block traffic to ports that are commonly targeted in attacks.</p>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Port</th>
+                                        <th>Service</th>
+                                        <th>Protocol</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>23</td>
+                                        <td>Telnet</td>
+                                        <td>TCP</td>
+                                    </tr>
+                                    <tr>
+                                        <td>445</td>
+                                        <td>SMB</td>
+                                        <td>TCP</td>
+                                    </tr>
+                                    <tr>
+                                        <td>135</td>
+                                        <td>RPC</td>
+                                        <td>TCP</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1433</td>
+                                        <td>MS SQL</td>
+                                        <td>TCP</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3389</td>
+                                        <td>RDP</td>
+                                        <td>TCP</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_exploited_ports">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Secure Common Services</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Allow traffic only to necessary ports for common services and block all others.</p>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Port</th>
+                                        <th>Service</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>80, 443</td>
+                                        <td>HTTP/HTTPS</td>
+                                        <td><span class="badge badge-success">Allow</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>22</td>
+                                        <td>SSH</td>
+                                        <td><span class="badge badge-success">Allow</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>53</td>
+                                        <td>DNS</td>
+                                        <td><span class="badge badge-success">Allow</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>25, 465, 587</td>
+                                        <td>SMTP</td>
+                                        <td><span class="badge badge-success">Allow</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>All others</td>
+                                        <td>-</td>
+                                        <td><span class="badge badge-danger">Block</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="secure_common_services">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Database Protection</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block external access to common database ports.</p>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Port</th>
+                                        <th>Database</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>3306</td>
+                                        <td>MySQL</td>
+                                    </tr>
+                                    <tr>
+                                        <td>5432</td>
+                                        <td>PostgreSQL</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1521</td>
+                                        <td>Oracle</td>
+                                    </tr>
+                                    <tr>
+                                        <td>27017</td>
+                                        <td>MongoDB</td>
+                                    </tr>
+                                    <tr>
+                                        <td>6379</td>
+                                        <td>Redis</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="database_protection">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Attack Protection Rules -->
+        <div class="tab-pane fade" id="attacks" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">DDoS Protection</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Rules to help mitigate common DDoS attacks.</p>
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item">SYN Flood Protection</li>
+                                <li class="list-group-item">UDP Flood Protection</li>
+                                <li class="list-group-item">ICMP Flood Protection</li>
+                                <li class="list-group-item">Connection Limiting</li>
+                            </ul>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="ddos_protection">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Web Application Protection</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Rules to protect web applications from common attacks.</p>
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item">SQL Injection Protection</li>
+                                <li class="list-group-item">XSS Protection</li>
+                                <li class="list-group-item">Directory Traversal Protection</li>
+                                <li class="list-group-item">Command Injection Protection</li>
+                            </ul>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="web_app_protection">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Tor Exit Nodes</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block traffic from known Tor exit nodes to prevent anonymous attacks.</p>
+                            <div class="alert alert-info small">
+                                <i class="fas fa-info-circle"></i> This will create rules to block known Tor exit nodes, which are frequently used for malicious activities. The list is updated daily.
+                            </div>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_tor_exits">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Known Botnets</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block traffic from IP addresses known to be part of botnets.</p>
+                            <div class="alert alert-info small">
+                                <i class="fas fa-info-circle"></i> These rules block IP addresses identified as part of active botnets based on threat intelligence feeds.
+                            </div>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_botnets">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Miscellaneous Rules -->
+        <div class="tab-pane fade" id="misc" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Ping/ICMP</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block ICMP packets to prevent ping-based reconnaissance and attacks.</p>
+                            <div class="alert alert-warning small">
+                                <i class="fas fa-exclamation-triangle"></i> Blocking ICMP completely can interfere with legitimate network functionality like Path MTU Discovery.
+                            </div>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_icmp">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block P2P Traffic</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block peer-to-peer file sharing traffic.</p>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Application</th>
+                                        <th>Ports</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>BitTorrent</td>
+                                        <td>6881-6889</td>
+                                    </tr>
+                                    <tr>
+                                        <td>eMule</td>
+                                        <td>4662, 4672</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Gnutella</td>
+                                        <td>6346-6347</td>
+                                    </tr>
+                                    <tr>
+                                        <td>DC++</td>
+                                        <td>1411</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_p2p">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add These Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">VPN Access Only</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Configure rules to only allow access to specific services through VPN.</p>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="vpn_only">
+                                
+                                <div class="form-group">
+                                    <label for="vpn_subnet">VPN Subnet</label>
+                                    <input type="text" class="form-control" id="vpn_subnet" name="vpn_subnet" 
+                                           placeholder="e.g., 10.8.0.0/24" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Select services to restrict to VPN only:</label>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="ssh_vpn" name="services" value="ssh" checked>
+                                        <label class="custom-control-label" for="ssh_vpn">SSH (Port 22)</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="rdp_vpn" name="services" value="rdp" checked>
+                                        <label class="custom-control-label" for="rdp_vpn">RDP (Port 3389)</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="db_vpn" name="services" value="databases" checked>
+                                        <label class="custom-control-label" for="db_vpn">Database Ports</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="admin_vpn" name="services" value="admin">
+                                        <label class="custom-control-label" for="admin_vpn">Admin Panels (e.g., port 8080)</label>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Create VPN Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Block Outbound Protocols</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Block outbound traffic on specific protocols for data loss prevention.</p>
+                            <form method="post" action="{% url 'threat_intelligence:firewall_presets' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="preset" value="block_outbound">
+                                
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="ftp_out" name="protocols" value="ftp" checked>
+                                        <label class="custom-control-label" for="ftp_out">FTP (Port 21)</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="telnet_out" name="protocols" value="telnet" checked>
+                                        <label class="custom-control-label" for="telnet_out">Telnet (Port 23)</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="tftp_out" name="protocols" value="tftp" checked>
+                                        <label class="custom-control-label" for="tftp_out">TFTP (Port 69)</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="smb_out" name="protocols" value="smb" checked>
+                                        <label class="custom-control-label" for="smb_out">SMB (Port 445)</label>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add Selected Rules
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Make sure the tab navigation works
+        $('#presetTabs a').on('click', function (e) {
+            e.preventDefault();
+            $(this).tab('show');
+        });
+    });
+</script>
+{% endblock %}

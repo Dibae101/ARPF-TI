@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Firewall Rules{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">Firewall Rules</h1>
+        <div class="flex space-x-2">
+            <a href="{% url 'threat_intelligence:firewall_rule_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm">
+                <i class="fas fa-plus mr-1"></i> Add Rule
+            </a>
+            <a href="{% url 'threat_intelligence:firewall_presets' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded text-sm">
+                <i class="fas fa-shield-alt mr-1"></i> Rule Presets
+            </a>
+            <div class="relative inline-block text-left" x-data="{ open: false }">
+                <button @click="open = !open" type="button" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded text-sm inline-flex items-center">
+                    <i class="fas fa-file-export mr-1"></i> Import/Export
+                    <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+                <div x-show="open" @click.away="open = false" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    <div class="py-1">
+                        <a href="{% url 'threat_intelligence:firewall_rule_import' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-file-import mr-1"></i> Import Rules
+                        </a>
+                        <a href="{% url 'threat_intelligence:firewall_rules_export' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-file-export mr-1"></i> Export Rules
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg mb-6">
+        <div class="py-3 px-4 border-b border-gray-200">
+            <div class="flex flex-col md:flex-row md:items-center">
+                <div class="w-full md:w-4/5">
+                    <form method="get" id="filter-form" class="flex flex-wrap">
+                        <div class="flex mr-2 mb-2 w-full md:w-auto">
+                            <input type="text" class="py-1 px-2 border border-gray-300 rounded-l w-full" name="q" placeholder="Search rules..." value="{{ query }}">
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-r" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="mr-2 mb-2">
+                            <select name="type" class="py-1 px-2 border border-gray-300 rounded text-sm" onchange="this.form.submit()">
+                                <option value="">All Rule Types</option>
+                                {% for type_code, type_name in rule_types %}
+                                <option value="{{ type_code }}" {% if selected_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mr-2 mb-2">
+                            <select name="action" class="py-1 px-2 border border-gray-300 rounded text-sm" onchange="this.form.submit()">
+                                <option value="">All Actions</option>
+                                {% for action_code, action_name in actions %}
+                                <option value="{{ action_code }}" {% if selected_action == action_code %}selected{% endif %}>{{ action_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mr-2 mb-2">
+                            <select name="is_active" class="py-1 px-2 border border-gray-300 rounded text-sm" onchange="this.form.submit()">
+                                <option value="">All Status</option>
+                                <option value="true" {% if selected_is_active == 'true' %}selected{% endif %}>Active</option>
+                                <option value="false" {% if selected_is_active == 'false' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="w-full md:w-1/5 text-right mt-2 md:mt-0">
+                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">{{ page_obj.paginator.count }} Rules</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">Value</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/10">Action</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/10">Direction</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/20">Priority</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/10">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/10">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for rule in page_obj %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{% url 'threat_intelligence:firewall_rule_detail' rule_id=rule.id %}" class="text-blue-600 hover:text-blue-900">{{ rule.name }}</a>
+                            {% if rule.description %}
+                            <p class="text-xs text-gray-500 mt-1">{{ rule.description|truncatechars:50 }}</p>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ rule.get_rule_type_display }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <code class="px-2 py-1 bg-gray-100 rounded text-sm">{{ rule.value }}</code>
+                            {% if rule.rule_type == 'port' or rule.rule_type == 'port_range' %}
+                            <p class="text-xs text-gray-500 mt-1">
+                                {% if rule.port and rule.port_end %}
+                                {{ rule.port }} - {{ rule.port_end }}
+                                {% elif rule.port %}
+                                Port: {{ rule.port }}
+                                {% endif %}
+                                {% if rule.protocol %}
+                                <span class="bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded">{{ rule.protocol|upper }}</span>
+                                {% endif %}
+                            </p>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if rule.action == 'block' %}
+                            <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">{{ rule.get_action_display }}</span>
+                            {% elif rule.action == 'allow' %}
+                            <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">{{ rule.get_action_display }}</span>
+                            {% else %}
+                            <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">{{ rule.get_action_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if rule.direction == 'inbound' %}
+                            <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">Inbound</span>
+                            {% elif rule.direction == 'outbound' %}
+                            <span class="bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded">Outbound</span>
+                            {% else %}
+                            <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">Both</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                            {{ rule.priority }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if rule.is_temporary %}
+                            <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">Temporary</span>
+                            <br>
+                            <span class="text-xs text-gray-500">
+                                {% if rule.expiry_date %}
+                                Expires: {{ rule.expiry_date|date:"Y-m-d H:i" }}
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                            
+                            <div class="flex items-center mt-1">
+                                <input type="checkbox" class="h-4 w-4 text-blue-600 rule-toggle" 
+                                       id="toggle-{{ rule.id }}" 
+                                       data-rule-id="{{ rule.id }}" 
+                                       {% if rule.is_active %}checked{% endif %}>
+                                <label class="ml-2 text-sm text-gray-700" for="toggle-{{ rule.id }}">
+                                    {% if rule.is_active %}Active{% else %}Inactive{% endif %}
+                                </label>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'threat_intelligence:firewall_rule_edit' rule_id=rule.id %}" class="text-blue-600 hover:text-blue-900">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="text-red-600 hover:text-red-900 delete-rule" data-rule-id="{{ rule.id }}" data-rule-name="{{ rule.name }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-10 text-center">
+                            <p class="text-gray-500 mb-4">No firewall rules found.</p>
+                            <div class="flex justify-center space-x-2">
+                                <a href="{% url 'threat_intelligence:firewall_rule_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm">
+                                    <i class="fas fa-plus mr-1"></i> Add New Rule
+                                </a>
+                                <a href="{% url 'threat_intelligence:firewall_presets' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded text-sm">
+                                    <i class="fas fa-shield-alt mr-1"></i> Use Presets
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="px-6 py-4">
+            {% include "_pagination.html" with page_obj=page_obj %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Rule Modal -->
+<div id="deleteRuleModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            Confirm Delete
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">
+                                Are you sure you want to delete the rule <strong id="rule-name-placeholder"></strong>?
+                            </p>
+                            <p class="text-sm text-red-600 mt-2">
+                                This action cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <form id="delete-rule-form" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Delete
+                    </button>
+                </form>
+                <button type="button" id="cancel-delete" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('alpine:init', () => {
+        // Alpine.js is included in base.html
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Rule toggle (active/inactive)
+        const toggles = document.querySelectorAll('.rule-toggle');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const ruleId = this.dataset.ruleId;
+                const isChecked = this.checked;
+                const toggleUrl = `/threat_intelligence/firewall-rules/${ruleId}/toggle/`;
+                
+                fetch(toggleUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update label text
+                        document.querySelector(`label[for="toggle-${ruleId}"]`).textContent = isChecked ? 'Active' : 'Inactive';
+                        
+                        // Show success notification (you can implement a toast if needed)
+                        console.log(data.message);
+                    } else {
+                        // Revert the checkbox state if the operation failed
+                        this.checked = !isChecked;
+                        console.error('Failed to update rule status');
+                    }
+                })
+                .catch(error => {
+                    // Revert the checkbox state if the operation failed
+                    this.checked = !isChecked;
+                    console.error('Error communicating with the server');
+                });
+            });
+        });
+        
+        // Delete rule button
+        const deleteButtons = document.querySelectorAll('.delete-rule');
+        const deleteModal = document.getElementById('deleteRuleModal');
+        const cancelButton = document.getElementById('cancel-delete');
+        
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const ruleId = this.dataset.ruleId;
+                const ruleName = this.dataset.ruleName;
+                
+                // Update the modal
+                document.getElementById('rule-name-placeholder').textContent = ruleName;
+                document.getElementById('delete-rule-form').action = `/threat_intelligence/firewall-rules/${ruleId}/delete/`;
+                
+                // Show the modal
+                deleteModal.classList.remove('hidden');
+            });
+        });
+        
+        // Close modal when clicking cancel
+        cancelButton.addEventListener('click', function() {
+            deleteModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === deleteModal) {
+                deleteModal.classList.add('hidden');
+            }
+        });
+    });
+</script>
+{% endblock %}

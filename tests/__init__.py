@@ -14,18 +14,25 @@ def setup_django_test_environment():
     
     # Configure Django settings
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'arpf_ti.settings')
-    django.setup()
     
-    # Use in-memory SQLite database for tests
-    settings.DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
+    # Override settings before Django setup
+    if not settings.configured:
+        from django.test.utils import get_runner
+        import arpf_ti.settings as app_settings
+        
+        # Use in-memory SQLite database for tests
+        app_settings.DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': ':memory:',
+            }
         }
-    }
+        
+        # Disable logging during tests
+        app_settings.LOGGING = {
+            'version': 1,
+            'disable_existing_loggers': True,
+        }
     
-    # Disable logging during tests
-    settings.LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': True,
-    }
+    # Initialize Django
+    django.setup()

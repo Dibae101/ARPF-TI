@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 from core.models import Rule, RequestLog
 
 class Alert(models.Model):
@@ -84,3 +85,19 @@ class AlertNotificationConfig(models.Model):
         """Check if this alert should trigger a notification based on severity."""
         severity_order = dict((severity[0], i) for i, severity in enumerate(Alert.SEVERITY_LEVELS))
         return severity_order.get(alert.severity, 0) >= severity_order.get(self.min_severity, 0)
+
+
+class AlertComment(models.Model):
+    """
+    Comments that can be added to alerts by users for collaboration and documentation.
+    """
+    alert = models.ForeignKey(Alert, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    content = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Comment on {self.alert.title} by {self.user.username if self.user else 'Unknown'}"
