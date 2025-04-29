@@ -33,8 +33,8 @@
     <div>
         <h1 class="text-2xl font-bold text-gray-900">Threat Intelligence Entries</h1>
         <p class="mt-1 text-sm text-gray-600">
-            {% if selected_source %}
-                Showing entries from {{ selected_source.name }}
+            {% if source_filter %}
+                Showing entries from source ID: {{ source_filter }}
             {% else %}
                 Browse all threat intelligence entries
             {% endif %}
@@ -48,32 +48,32 @@
                 <input type="hidden" name="source" value="{{ source_filter }}">
             {% endif %}
             
-            <select name="type" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+            <select name="entry_type" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">All Types</option>
-                {% for type_code, type_name in indicator_types %}
-                    <option value="{{ type_code }}" {% if type_filter == type_code %}selected{% endif %}>{{ type_name }}</option>
+                {% for entry_type in entry_types %}
+                    <option value="{{ entry_type }}" {% if entry_type_filter == entry_type %}selected{% endif %}>{{ entry_type }}</option>
                 {% endfor %}
             </select>
             
-            <select name="severity" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                <option value="">All Severities</option>
-                {% for severity_code, severity_name in severity_levels %}
-                    <option value="{{ severity_code }}" {% if severity_filter == severity_code %}selected{% endif %}>{{ severity_name }}</option>
+            <select name="category" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                    <option value="{{ category }}" {% if category_filter == category %}selected{% endif %}>{{ category }}</option>
                 {% endfor %}
             </select>
             
-            <select name="time" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                <option value="">All Time</option>
-                <option value="today" {% if time_filter == 'today' %}selected{% endif %}>Today</option>
-                <option value="week" {% if time_filter == 'week' %}selected{% endif %}>This Week</option>
-                <option value="month" {% if time_filter == 'month' %}selected{% endif %}>This Month</option>
+            <select name="min_confidence" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <option value="">Any Confidence</option>
+                <option value="0.9" {% if min_confidence == '0.9' %}selected{% endif %}>High (90%+)</option>
+                <option value="0.7" {% if min_confidence == '0.7' %}selected{% endif %}>Medium (70%+)</option>
+                <option value="0.5" {% if min_confidence == '0.5' %}selected{% endif %}>Low (50%+)</option>
             </select>
             
             <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-md">
                 <i class="fas fa-filter mr-1"></i> Filter
             </button>
             
-            {% if type_filter or severity_filter or time_filter %}
+            {% if entry_type_filter or category_filter or min_confidence %}
                 <a href="{% url 'threat_intelligence:entries_list' %}{% if source_filter %}?source={{ source_filter }}{% endif %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-4 py-2 rounded-md">
                     <i class="fas fa-times mr-1"></i> Clear
                 </a>
@@ -89,7 +89,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Indicator
+                        Value
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
@@ -98,10 +98,13 @@
                         Source
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Severity
+                        Confidence
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Added
+                        Category
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        First Seen
                     </th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -109,14 +112,16 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for entry in entries %}
+                {% for entry in page_obj %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 text-sm font-medium text-gray-900 break-all max-w-md">
-                        {{ entry.indicator }}
+                        <a href="{% url 'threat_intelligence:entry_detail' entry_id=entry.id %}" class="text-blue-600 hover:text-blue-900 font-mono">
+                            {{ entry.value }}
+                        </a>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {{ entry.get_indicator_type_display }}
+                            {{ entry.get_entry_type_display }}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -125,40 +130,39 @@
                         </a>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% if entry.severity == 'high' %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                High
-                            </span>
-                        {% elif entry.severity == 'medium' %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                Medium
-                            </span>
-                        {% else %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                Low
-                            </span>
-                        {% endif %}
+                        <div class="w-24 bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ entry.confidence_score|floatformat:"0" }}%;"></div>
+                        </div>
+                        <span class="text-xs ml-1">{{ entry.confidence_score|floatformat:"0" }}%</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ entry.created_at|date:"M d, Y" }}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                {% if entry.category == 'sql_injection' or entry.category == 'xss_attempt' %}bg-red-100 text-red-800
+                                {% elif entry.category == 'high_volume' %}bg-orange-100 text-orange-800
+                                {% elif entry.category == 'blocked' %}bg-yellow-100 text-yellow-800
+                                {% elif entry.category == 'malicious' %}bg-purple-100 text-purple-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ entry.category|default:"Unknown" }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ entry.first_seen|date:"M d, Y" }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div class="flex space-x-2">
-                            <button type="button" onclick="showDetails('{{ entry.id }}');" class="text-blue-500 hover:text-blue-900" title="View Details">
+                            <a href="{% url 'threat_intelligence:entry_detail' entry_id=entry.id %}" class="text-blue-500 hover:text-blue-900" title="View Details">
                                 <i class="fas fa-eye"></i>
-                            </button>
-                            {% if entry.context %}
-                            <button type="button" onclick="showContext('{{ entry.id }}');" class="text-green-500 hover:text-green-900" title="View Context">
-                                <i class="fas fa-info-circle"></i>
-                            </button>
-                            {% endif %}
+                            </a>
+                            <a href="{% url 'threat_intelligence:create_firewall_rule' entry_id=entry.id %}" class="text-green-500 hover:text-green-900" title="Create Firewall Rule">
+                                <i class="fas fa-shield-alt"></i>
+                            </a>
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                        No entries found with the current filters.
+                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                        No entries found. Try <a href="{% url 'threat_intelligence:analyze_traffic' %}" class="text-blue-600 hover:text-blue-900">analyzing traffic</a> to generate entries based on real traffic patterns.
                     </td>
                 </tr>
                 {% endfor %}
@@ -168,155 +172,10 @@
 </div>
 
 <!-- Pagination -->
-{% if entries.has_other_pages %}
+{% if page_obj.has_other_pages %}
 <div class="mt-6">
-    {% include '_pagination.html' with page_obj=entries %}
+    {% include '_pagination.html' with page_obj=page_obj %}
 </div>
 {% endif %}
 
-<!-- Entry Details Modal -->
-<div id="detailsModal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-shield-alt text-blue-600"></i>
-                    </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                            Threat Indicator Details
-                        </h3>
-                        <div class="mt-4 space-y-4">
-                            <div>
-                                <p class="text-sm text-gray-500">Indicator</p>
-                                <p id="indicator-value" class="font-mono text-sm text-gray-900 break-all"></p>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-sm text-gray-500">Type</p>
-                                    <p id="indicator-type" class="text-sm font-medium text-gray-900"></p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-500">Severity</p>
-                                    <p id="indicator-severity" class="text-sm font-medium"></p>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">Source</p>
-                                <p id="indicator-source" class="text-sm text-gray-900"></p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">Timestamp</p>
-                                <p id="indicator-timestamp" class="text-sm text-gray-900"></p>
-                            </div>
-                            <div id="indicator-context-section" class="hidden">
-                                <p class="text-sm text-gray-500">Context</p>
-                                <div class="bg-gray-50 rounded p-3 mt-1">
-                                    <p id="indicator-context" class="text-sm text-gray-900 whitespace-pre-line"></p>
-                                </div>
-                            </div>
-                            <div id="indicator-tags-section" class="hidden">
-                                <p class="text-sm text-gray-500">Tags</p>
-                                <div id="indicator-tags" class="flex flex-wrap gap-2 mt-1"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="closeModal();" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-{# First, we render entry data as JSON in a script tag #}
-{{ entries_data|json_script:"entries-data" }}
-
-<script>
-    // Safely parse the JSON data from the script tag
-    const entryData = JSON.parse(document.getElementById('entries-data').textContent);
-
-    function showDetails(entryId) {
-        const entry = entryData[entryId];
-        if (!entry) return;
-        
-        document.getElementById('indicator-value').textContent = entry.indicator;
-        document.getElementById('indicator-type').textContent = entry.type;
-        document.getElementById('indicator-source').textContent = entry.source;
-        document.getElementById('indicator-timestamp').textContent = entry.timestamp;
-        
-        // Handle severity with proper styling
-        const severityElem = document.getElementById('indicator-severity');
-        severityElem.textContent = entry.severity.charAt(0).toUpperCase() + entry.severity.slice(1);
-        severityElem.className = "text-sm font-medium";
-        
-        if (entry.severity === 'high') {
-            severityElem.classList.add('text-red-600');
-        } else if (entry.severity === 'medium') {
-            severityElem.classList.add('text-yellow-600');
-        } else {
-            severityElem.classList.add('text-blue-600');
-        }
-        
-        // Handle context (if available)
-        const contextSection = document.getElementById('indicator-context-section');
-        if (entry.context) {
-            document.getElementById('indicator-context').textContent = entry.context;
-            contextSection.classList.remove('hidden');
-        } else {
-            contextSection.classList.add('hidden');
-        }
-        
-        // Handle tags (if available)
-        const tagsSection = document.getElementById('indicator-tags-section');
-        const tagsContainer = document.getElementById('indicator-tags');
-        if (entry.tags && entry.tags.length > 0) {
-            tagsContainer.innerHTML = '';
-            entry.tags.forEach(tag => {
-                const tagElem = document.createElement('span');
-                tagElem.className = 'px-2 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-800';
-                tagElem.textContent = tag;
-                tagsContainer.appendChild(tagElem);
-            });
-            tagsSection.classList.remove('hidden');
-        } else {
-            tagsSection.classList.add('hidden');
-        }
-        
-        // Show modal
-        document.getElementById('detailsModal').classList.remove('hidden');
-    }
-    
-    function showContext(entryId) {
-        showDetails(entryId);
-        document.getElementById('indicator-context-section').scrollIntoView({ behavior: 'smooth' });
-    }
-    
-    function closeModal() {
-        document.getElementById('detailsModal').classList.add('hidden');
-    }
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        const modal = document.getElementById('detailsModal');
-        if (event.target === modal) {
-            closeModal();
-        }
-    });
-    
-    // Close modal on Escape key
-    window.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeModal();
-        }
-    });
-</script>
 {% endblock %}

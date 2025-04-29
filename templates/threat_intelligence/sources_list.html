@@ -84,7 +84,7 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for source in sources %}
+                {% for source in page_obj %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         <a href="{% url 'threat_intelligence:source_detail' source_id=source.id %}"
@@ -113,7 +113,7 @@
                         {{ source.last_updated|default:"Never" }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ source.entries_count }}
+                        {{ source.entries.count }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div class="flex space-x-2">
@@ -144,6 +144,13 @@
         </table>
     </div>
 </div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="mt-6">
+    {% include '_pagination.html' with page_obj=page_obj %}
+</div>
+{% endif %}
 
 <!-- Source Types Information -->
 <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">

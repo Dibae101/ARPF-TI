@@ -32,14 +32,14 @@
         <p class="mt-1 text-sm text-gray-600">Manage and analyze threat intelligence data sources</p>
     </div>
     <div class="flex space-x-3">
-        <a href="{% url 'threat_intelligence:source_add' %}" class="btn-primary">
+        <a href="{% url 'threat_intelligence:source_add' %}" class="btn-primary py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm flex items-center">
             <i class="fas fa-plus mr-2"></i> Add Source
         </a>
     </div>
 </div>
 
 <!-- Stats Overview -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <!-- Total Intel Sources -->
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-start">
@@ -62,7 +62,7 @@
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-start">
             <div>
-                <p class="text-sm font-medium text-gray-500">Intel Entries</p>
+                <p class="text-sm font-medium text-gray-500">Total Entries</p>
                 <p class="text-2xl font-bold text-gray-900 mt-1">{{ entries_count }}</p>
             </div>
             <div class="p-3 bg-green-100 rounded-full text-green-600">
@@ -71,7 +71,7 @@
         </div>
         <div class="mt-4">
             <p class="text-xs text-gray-500">
-                {{ high_confidence_count }} high confidence entries
+                {{ traffic_analysis_entries }} from traffic analysis
             </p>
         </div>
     </div>
@@ -80,7 +80,7 @@
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-start">
             <div>
-                <p class="text-sm font-medium text-gray-500">Recent Updates</p>
+                <p class="text-sm font-medium text-gray-500">New Entries (24h)</p>
                 <p class="text-2xl font-bold text-gray-900 mt-1">{{ recent_updates_count }}</p>
             </div>
             <div class="p-3 bg-yellow-100 rounded-full text-yellow-600">
@@ -89,49 +89,113 @@
         </div>
         <div class="mt-4">
             <p class="text-xs text-gray-500">
-                Last 24 hours
+                Added in the last 24 hours
             </p>
         </div>
     </div>
 
-    <!-- Gemini AI Active -->
+    <!-- High Confidence Entries -->
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-start">
             <div>
-                <p class="text-sm font-medium text-gray-500">Gemini AI</p>
-                <p class="text-2xl font-bold text-gray-900 mt-1">Active</p>
+                <p class="text-sm font-medium text-gray-500">High Confidence</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ high_confidence_count }}</p>
             </div>
-            <div class="p-3 bg-purple-100 rounded-full text-purple-600 pulse-animation">
-                <i class="fas fa-brain"></i>
+            <div class="p-3 bg-red-100 rounded-full text-red-600">
+                <i class="fas fa-exclamation-triangle"></i>
             </div>
         </div>
         <div class="mt-4">
             <p class="text-xs text-gray-500">
-                Learning from network traffic
+                Entries with 75%+ confidence
             </p>
         </div>
     </div>
 </div>
 
-<!-- Gemini AI Insights -->
-<div class="grid grid-cols-1 gap-6 mb-6">
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+<!-- Combined Intelligence Tools Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Traffic Analysis Tool -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden h-full">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="p-2 bg-white bg-opacity-20 rounded-full mr-3">
+                        <i class="fas fa-chart-network text-white"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white">Network Traffic Analysis</h3>
+                </div>
+                <div class="flex items-center">
+                    {% if last_traffic_analysis %}
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 mr-3">
+                        Last run: {{ last_traffic_analysis|date:"M d, H:i" }}
+                    </span>
+                    {% endif %}
+                    <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=7" 
+                       class="px-4 py-2 bg-white text-blue-700 rounded-md hover:bg-blue-50 text-sm font-medium transition-colors duration-200 shadow-sm">
+                        Run Analysis
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="mb-4">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">How Traffic Analysis Works:</h4>
+                <ul class="space-y-2 text-sm text-gray-700">
+                    <li class="flex items-start">
+                        <i class="fas fa-history text-blue-600 mt-1 mr-2"></i>
+                        <span><strong>Log Processing:</strong> Analyzes historical request logs to identify patterns, anomalies, and potential threats.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-user-shield text-blue-600 mt-1 mr-2"></i>
+                        <span><strong>Blocked IPs:</strong> Identifies and tracks IPs that have triggered blocking rules.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-tachometer-alt text-blue-600 mt-1 mr-2"></i>
+                        <span><strong>Volume Analysis:</strong> Detects abnormal request volumes that may indicate scanning or abuse.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-filter text-blue-600 mt-1 mr-2"></i>
+                        <span><strong>Pattern Recognition:</strong> Identifies signs of common attacks like SQL injection, XSS, or path traversal.</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="pt-4 border-t border-gray-200">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500">Traffic analysis generates actionable threat intelligence</span>
+                    <div>
+                        <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=1" 
+                           class="text-xs inline-block px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded mr-2 transition-colors duration-200">
+                           Last 24 hours
+                        </a>
+                        <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=30" 
+                           class="text-xs inline-block px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded transition-colors duration-200">
+                           Last 30 days
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ARPF AI Defense -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden h-full">
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
                     <div class="p-2 bg-white bg-opacity-20 rounded-full mr-3">
                         <i class="fas fa-brain text-white"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-white">AI Assistant</h3>
+                    <h3 class="text-lg font-semibold text-white">ARPF Defense</h3>
                 </div>
-                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                <span class="px-3 py-1.5 text-xs font-semibold rounded-md bg-green-100 text-green-800 shadow-sm">
                     Active
                 </span>
             </div>
         </div>
         <div class="p-6">
             <div class="mb-4">
-                <h4 class="text-sm font-medium text-gray-900 mb-2">How Gemini AI Works:</h4>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">How ARPF Defense Works:</h4>
                 <ul class="space-y-2 text-sm text-gray-700">
                     <li class="flex items-start">
                         <i class="fas fa-chart-line text-purple-600 mt-1 mr-2"></i>
@@ -157,7 +221,8 @@
             </div>
             <div class="pt-4 border-t border-gray-200">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs text-gray-500">Last model update: April 15, 2025</span>
+                    <span class="text-xs text-gray-500">Model last updated: {{ now|date:"F d, Y" }}</span>
+                    <div class="pulse-animation bg-green-400 w-2 h-2 rounded-full"></div>
                 </div>
             </div>
         </div>
@@ -172,7 +237,7 @@
             <div class="card-header flex justify-between items-center">
                 <span>Threat Intelligence Sources</span>
                 <a href="{% url 'threat_intelligence:sources_list' %}"
-                    class="text-sm text-blue-600 hover:text-blue-800">View all</a>
+                    class="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded transition-colors duration-200">View all</a>
             </div>
             <div class="card-body p-0">
                 <div class="overflow-x-auto">
@@ -233,7 +298,7 @@
                                     {{ source.last_updated|default:"Never" }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ source.entries_count }}
+                                    {{ source.entries.count }}
                                 </td>
                             </tr>
                             {% empty %}
@@ -258,9 +323,14 @@
     <div class="card-header flex justify-between items-center">
         <div class="flex items-center">
             <span>Recent Threat Intelligence Entries</span>
+            {% if recent_entries %}
+            <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                Real Traffic
+            </span>
+            {% endif %}
         </div>
-        <a href="{% url 'threat_intelligence:entries_list' %}" class="text-sm text-blue-600 hover:text-blue-800">View
-            all</a>
+        <a href="{% url 'threat_intelligence:entries_list' %}" 
+           class="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded transition-colors duration-200">View all</a>
     </div>
     <div class="card-body p-0">
         <div class="overflow-x-auto">
@@ -300,21 +370,23 @@
                             {{ entry.get_entry_type_display }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ entry.source.name }}
+                            <a href="{% url 'threat_intelligence:source_detail' source_id=entry.source.id %}" class="hover:underline">
+                                {{ entry.source.name }}
+                            </a>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <div class="w-24 bg-gray-200 rounded-full h-2.5">
                                 <div class="bg-blue-600 h-2.5 rounded-full"
-                                    style="width: {{ entry.confidence_score|default:" 0" }}%;"></div>
+                                    style="width: {{ entry.confidence_score|floatformat:"0" }}%;"></div>
                             </div>
-                            <span class="text-xs ml-1">{{ entry.confidence_score }}%</span>
+                            <span class="text-xs ml-1">{{ entry.confidence_score|floatformat:"0" }}%</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <span class="px-2 py-1 text-xs font-semibold rounded-full 
-                                    {% if entry.category == 'malware' %}bg-red-100 text-red-800
-                                    {% elif entry.category == 'phishing' %}bg-orange-100 text-orange-800
-                                    {% elif entry.category == 'botnet' %}bg-yellow-100 text-yellow-800
-                                    {% elif entry.category == 'ransomware' %}bg-purple-100 text-purple-800
+                                    {% if entry.category == 'sql_injection' or entry.category == 'xss_attempt' %}bg-red-100 text-red-800
+                                    {% elif entry.category == 'high_volume' %}bg-orange-100 text-orange-800
+                                    {% elif entry.category == 'blocked' %}bg-yellow-100 text-yellow-800
+                                    {% elif entry.category == 'malicious' %}bg-purple-100 text-purple-800
                                     {% else %}bg-gray-100 text-gray-800{% endif %}">
                                 {{ entry.category }}
                             </span>
@@ -326,7 +398,9 @@
                     {% empty %}
                     <tr>
                         <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                            No threat intelligence entries found. Add a source to start collecting data.
+                            No threat intelligence entries found. <a href="{% url 'threat_intelligence:analyze_traffic' %}" 
+                              class="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded">
+                              <i class="fas fa-chart-line mr-1"></i> Run traffic analysis</a> to generate entries based on actual traffic.
                         </td>
                     </tr>
                     {% endfor %}
@@ -336,7 +410,7 @@
     </div>
 </div>
 
-<!-- Add pulse animation for the Gemini AI icon -->
+<!-- Add pulse animation for the AI status indicator -->
 <style>
     .pulse-animation {
         animation: pulse 2s infinite;
@@ -344,16 +418,47 @@
 
     @keyframes pulse {
         0% {
-            box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.4);
+            box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
         }
 
         70% {
-            box-shadow: 0 0 0 10px rgba(147, 51, 234, 0);
+            box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
         }
 
         100% {
-            box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+            box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
         }
     }
+    
+    /* Enhanced button styles */
+    .btn-primary {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .btn-primary:active {
+        transform: translateY(0px);
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set the current date for the model update display
+        const modelDateElement = document.querySelector('.ai-model-date');
+        if (modelDateElement) {
+            const today = new Date();
+            modelDateElement.textContent = today.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+    });
+</script>
 {% endblock %}

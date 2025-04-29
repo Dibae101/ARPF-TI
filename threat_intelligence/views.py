@@ -6,14 +6,27 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
 from .models import ThreatIntelEntry, ThreatIntelSource, SuggestedFirewallRule
-from core.models import Rule as FirewallRule
+from core.models import Rule as FirewallRule, RequestLog
 from .forms import SourceForm
+from .traffic_analyzer import traffic_analyzer
 
 @login_required
 def index(request):
     """Main dashboard for the threat intelligence module"""
-    # Get most recent threat intelligence entries - exclude test data
-    recent_entries = ThreatIntelEntry.objects.filter(is_active=True, is_test_data=False).order_by('-last_seen')[:10]
+    # Get most recent threat intelligence entries - focus on real traffic-based entries
+    recent_entries = ThreatIntelEntry.objects.filter(
+        is_active=True, 
+        is_test_data=False,
+        # Prioritize entries from traffic analysis sources
+        source__name__startswith='Traffic Analysis'
+    ).order_by('-last_seen')[:10]
+    
+    # If no traffic-based entries exist, fall back to other real (non-test) entries
+    if not recent_entries:
+        recent_entries = ThreatIntelEntry.objects.filter(
+            is_active=True, 
+            is_test_data=False
+        ).order_by('-last_seen')[:10]
     
     # Get configured threat intelligence sources
     sources = ThreatIntelSource.objects.filter(is_active=True)
@@ -26,6 +39,12 @@ def index(request):
         last_seen__gte=timezone.now() - timezone.timedelta(days=7)
     ).count()
     
+    # Get counts specific to traffic analysis
+    traffic_analysis_entries = ThreatIntelEntry.objects.filter(
+        source__name__startswith='Traffic Analysis',
+        is_active=True
+    ).count()
+    
     # Get suggested rules stats
     pending_rules = SuggestedFirewallRule.objects.filter(status='pending').count()
     
@@ -36,16 +55,23 @@ def index(request):
         is_test_data=False,
         last_seen__gte=timezone.now() - timezone.timedelta(hours=24)
     ).count()
-    high_confidence_count = ThreatIntelEntry.objects.filter(is_test_data=False, confidence_score__gte=75).count()
+    high_confidence_count = ThreatIntelEntry.objects.filter(is_test_data=False, confidence_score__gte=0.75).count()
     
     # Get recent sources for the dashboard
     recent_sources = ThreatIntelSource.objects.all().order_by('-last_updated')[:5]
+    
+    # Check when traffic analysis was last run
+    traffic_analysis_sources = ThreatIntelSource.objects.filter(name__startswith='Traffic Analysis')
+    last_traffic_analysis = None
+    if traffic_analysis_sources.exists():
+        last_traffic_analysis = traffic_analysis_sources.order_by('-last_updated').first().last_updated
     
     context = {
         'recent_entries': recent_entries,
         'sources': sources,
         'total_entries': total_entries,
         'recent_entries_count': recent_entries_count,
+        'traffic_analysis_entries': traffic_analysis_entries,
         'pending_rules': pending_rules,
         'sources_count': sources_count,
         'active_sources_count': active_sources_count,
@@ -53,6 +79,7 @@ def index(request):
         'recent_updates_count': recent_updates_count,
         'high_confidence_count': high_confidence_count,
         'recent_sources': recent_sources,
+        'last_traffic_analysis': last_traffic_analysis,
     }
     
     return render(request, 'threat_intelligence/index.html', context)
@@ -76,6 +103,9 @@ def sources_list(request):
 @user_passes_test(lambda u: u.is_staff)
 def source_add(request):
     """View to add a new threat intelligence source"""
+    # Check if user is applying a recommendation
+    recommendation_id = request.GET.get('recommendation')
+    
     if request.method == 'POST':
         form = SourceForm(request.POST)
         if form.is_valid():
@@ -85,11 +115,37 @@ def source_add(request):
             messages.success(request, f"Source '{source.name}' created successfully.")
             return redirect('threat_intelligence:sources_list')
     else:
-        form = SourceForm()
+        # Check if recommended source should be pre-filled
+        initial_data = {}
+        if recommendation_id:
+            try:
+                # Get AI recommendations
+                recommendations = traffic_analyzer.get_source_recommendations()
+                
+                # Find the selected recommendation
+                if recommendations and 0 <= int(recommendation_id) < len(recommendations):
+                    recommended_source = recommendations[int(recommendation_id)]
+                    initial_data = {
+                        'name': recommended_source['name'],
+                        'source_type': recommended_source['source_type'],
+                        'description': recommended_source['description'],
+                        'url': recommended_source['url'],
+                        'is_active': True,
+                    }
+                    messages.info(request, f"Form pre-filled with AI-recommended source: {recommended_source['name']}")
+            except (ValueError, IndexError) as e:
+                pass
+                
+        form = SourceForm(initial=initial_data)
+    
+    # Get AI recommendations based on recent traffic
+    recommendations = traffic_analyzer.get_source_recommendations()
     
     context = {
         'form': form,
         'title': 'Add Threat Intelligence Source',
+        'recommendations': recommendations,
+        'source_types': dict(ThreatIntelSource.SOURCE_TYPES),
     }
     
     return render(request, 'threat_intelligence/source_form.html', context)
@@ -432,3 +488,39 @@ def toggle_entry_status(request, entry_id):
     }
     
     return render(request, 'threat_intelligence/toggle_entry_status.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def analyze_traffic(request):
+    """Run traffic analysis to generate threat intelligence from real traffic"""
+    # Default to 7 days if not specified
+    days_back = request.GET.get('days', 7)
+    try:
+        days_back = int(days_back)
+    except ValueError:
+        days_back = 7
+    
+    try:
+        # Run the traffic analysis using ARPF Defense
+        results = traffic_analyzer.analyze_logs(days=days_back)
+        
+        # Update timestamps for the Traffic Analysis sources
+        for source in ThreatIntelSource.objects.filter(name__startswith='Traffic Analysis'):
+            source.last_updated = timezone.now()
+            source.save()
+        
+        messages.success(
+            request, 
+            f"ARPF Defense traffic analysis completed successfully! Analyzed {results['total_logs_analyzed']} requests, "
+            f"identified {results['potential_threats_found']} potential threats. "
+            f"Created {results['threat_intel_entries_created']} new threat intelligence entries and "
+            f"{results.get('suggested_rules_created', 0)} suggested firewall rules."
+        )
+        
+    except Exception as e:
+        messages.error(
+            request, 
+            f"Error running ARPF Defense traffic analysis: {str(e)}"
+        )
+    
+    return redirect('threat_intelligence:index')

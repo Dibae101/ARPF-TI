@@ -6,6 +6,8 @@ app_name = 'threat_intelligence'
 urlpatterns = [
     # Main index page for threat intelligence
     path('', views.index, name='index'),
+    # Traffic analysis
+    path('analyze-traffic/', views.analyze_traffic, name='analyze_traffic'),
     # Source management
     path('sources/', views.sources_list, name='sources_list'),
     path('sources/add/', views.source_add, name='source_add'),

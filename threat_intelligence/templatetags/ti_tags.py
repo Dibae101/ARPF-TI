@@ -43,3 +43,13 @@ def threat_severity_color(severity):
         return 'bg-blue-100 text-blue-800'
     else:
         return 'bg-gray-100 text-gray-800'
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Get an item from a dictionary using the key.
+    Usage: {{ dictionary|get_item:key }}
+    """
+    if dictionary is None:
+        return None
+    return dictionary.get(key, key)
