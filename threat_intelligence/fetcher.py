@@ -244,7 +244,8 @@ class ThreatIntelFetcher:
                     defaults={
                         'category': category,
                         'is_active': True,
-                        'last_seen': timezone.now()
+                        'last_seen': timezone.now(),
+                        'is_test_data': False  # Ensure entries are marked as real data
                     }
                 )
         
@@ -260,7 +261,8 @@ class ThreatIntelFetcher:
                             'category': entry_data.get('category', category),
                             'confidence_score': entry_data.get('confidence_score', 1.0),
                             'is_active': True,
-                            'last_seen': timezone.now()
+                            'last_seen': timezone.now(),
+                            'is_test_data': False  # Ensure entries are marked as real data
                         }
                     )
 

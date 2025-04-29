@@ -12,16 +12,17 @@ from .forms import SourceForm
 @login_required
 def index(request):
     """Main dashboard for the threat intelligence module"""
-    # Get most recent threat intelligence entries
-    recent_entries = ThreatIntelEntry.objects.filter(is_active=True).order_by('-last_seen')[:10]
+    # Get most recent threat intelligence entries - exclude test data
+    recent_entries = ThreatIntelEntry.objects.filter(is_active=True, is_test_data=False).order_by('-last_seen')[:10]
     
     # Get configured threat intelligence sources
     sources = ThreatIntelSource.objects.filter(is_active=True)
     
-    # Get counts for dashboard stats
-    total_entries = ThreatIntelEntry.objects.filter(is_active=True).count()
+    # Get counts for dashboard stats - exclude test data
+    total_entries = ThreatIntelEntry.objects.filter(is_active=True, is_test_data=False).count()
     recent_entries_count = ThreatIntelEntry.objects.filter(
         is_active=True, 
+        is_test_data=False,
         last_seen__gte=timezone.now() - timezone.timedelta(days=7)
     ).count()
     
@@ -32,9 +33,10 @@ def index(request):
     sources_count = ThreatIntelSource.objects.count()
     active_sources_count = ThreatIntelSource.objects.filter(is_active=True).count()
     recent_updates_count = ThreatIntelEntry.objects.filter(
+        is_test_data=False,
         last_seen__gte=timezone.now() - timezone.timedelta(hours=24)
     ).count()
-    high_confidence_count = ThreatIntelEntry.objects.filter(confidence_score__gte=75).count()
+    high_confidence_count = ThreatIntelEntry.objects.filter(is_test_data=False, confidence_score__gte=75).count()
     
     # Get recent sources for the dashboard
     recent_sources = ThreatIntelSource.objects.all().order_by('-last_updated')[:5]
@@ -97,12 +99,12 @@ def source_detail(request, source_id):
     """View to show details of a threat intelligence source"""
     source = get_object_or_404(ThreatIntelSource, id=source_id)
     
-    # Get recent entries from this source
-    entries = ThreatIntelEntry.objects.filter(source=source).order_by('-last_seen')[:20]
+    # Get recent entries from this source - exclude test data
+    entries = ThreatIntelEntry.objects.filter(source=source, is_test_data=False).order_by('-last_seen')[:20]
     
-    # Get stats
-    entry_count = ThreatIntelEntry.objects.filter(source=source).count()
-    active_entry_count = ThreatIntelEntry.objects.filter(source=source, is_active=True).count()
+    # Get stats - exclude test data
+    entry_count = ThreatIntelEntry.objects.filter(source=source, is_test_data=False).count()
+    active_entry_count = ThreatIntelEntry.objects.filter(source=source, is_active=True, is_test_data=False).count()
     
     context = {
         'source': source,
@@ -122,7 +124,8 @@ def entries_list(request):
     source_filter = request.GET.get('source', '')
     min_confidence = request.GET.get('min_confidence', 0)
     
-    entries = ThreatIntelEntry.objects.all()
+    # Start with all non-test entries
+    entries = ThreatIntelEntry.objects.filter(is_test_data=False)
     
     if entry_type_filter:
         entries = entries.filter(entry_type=entry_type_filter)
@@ -140,10 +143,10 @@ def entries_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get filters for template
+    # Get filters for template - also exclude test data from these options
     sources = ThreatIntelSource.objects.all()
-    entry_types = ThreatIntelEntry.objects.values_list('entry_type', flat=True).distinct()
-    categories = ThreatIntelEntry.objects.values_list('category', flat=True).distinct()
+    entry_types = ThreatIntelEntry.objects.filter(is_test_data=False).values_list('entry_type', flat=True).distinct()
+    categories = ThreatIntelEntry.objects.filter(is_test_data=False).values_list('category', flat=True).distinct()
     
     context = {
         'page_obj': page_obj,

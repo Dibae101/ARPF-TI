@@ -93,6 +93,7 @@ class ThreatIntelEntry(models.Model):
     first_seen = models.DateTimeField(auto_now_add=True)
     last_seen = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    is_test_data = models.BooleanField(default=False, help_text="Flag to mark test/dummy data")
     
     # Add fields for enhanced TI metadata
     stix_id = models.CharField(max_length=255, blank=True, null=True, help_text="STIX ID for the object")
