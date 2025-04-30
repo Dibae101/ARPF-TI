@@ -567,6 +567,42 @@ class GeminiIntegration:
             "is_acknowledged": alert.is_acknowledged
         }
         
+        # Add specialized context for traffic-related alerts
+        traffic_context = ""
+        if alert.alert_type == 'network_anomaly' or 'traffic' in alert.title.lower():
+            traffic_context = """
+            For traffic-related alerts, consider these factors:
+            - Traffic volume: Is the volume of traffic unusually high?
+            - Traffic patterns: Are there unusual patterns in the traffic (e.g., same endpoint repeatedly hit)?
+            - Source IP reputation: Is the source IP known for malicious activity?
+            - Geographic origin: Is the traffic coming from unusual or high-risk regions?
+            - Time of day: Is the traffic occurring at unusual times?
+            
+            Consider whether this might be:
+            - A DDoS attack (very high volume, potentially distributed sources)
+            - Web scraping (systematic requests to many resources)
+            - Bot activity (high frequency, predictable patterns)
+            - Authorized load testing (high volume but from expected sources)
+            """
+        
+        # Add specialized context for repetitive block alerts
+        block_context = ""
+        if alert.alert_type == 'suspicious_activity' and 'block' in alert.description.lower():
+            block_context = """
+            For repetitive block alerts, consider these factors:
+            - Block frequency: How many blocks occurred in what timeframe?
+            - Block pattern: Are the blocks targeting specific resources or random?
+            - Geographic concentration: Are blocks coming from specific countries/regions?
+            - Known attack sources: Are the blocked IPs associated with known threats?
+            - Previous activity: Is there a history of similar block patterns?
+            
+            Consider whether this might be:
+            - A targeted attack (focused on specific resources)
+            - A distributed attack (many sources, same target)
+            - An automated scanner (methodical probing of different resources)
+            - A false positive (legitimate traffic getting blocked)
+            """
+        
         # Get additional context from feedback history
         feedback_context = self.utilize_feedback_for_prompt_improvement(alert)
         
@@ -576,6 +612,9 @@ class GeminiIntegration:
         
         ALERT DETAILS:
         {json.dumps(alert_details, indent=2)}
+        
+        {traffic_context}
+        {block_context}
         
         Your task:
         1. Determine if this alert is important enough to send as a notification (Yes/No)

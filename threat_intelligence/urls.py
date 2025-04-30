@@ -8,6 +8,8 @@ urlpatterns = [
     path('', views.index, name='index'),
     # Traffic analysis
     path('analyze-traffic/', views.analyze_traffic, name='analyze_traffic'),
+    # Traffic pattern detection and alerts
+    path('detect-traffic-patterns/', views.detect_traffic_patterns, name='detect_traffic_patterns'),
     # Source management
     path('sources/', views.sources_list, name='sources_list'),
     path('sources/add/', views.source_add, name='source_add'),

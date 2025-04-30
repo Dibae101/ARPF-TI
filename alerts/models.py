@@ -48,7 +48,7 @@ class Alert(models.Model):
     is_acknowledged = models.BooleanField(default=False)
     acknowledged_by = models.CharField(max_length=255, blank=True, null=True)
     acknowledged_at = models.DateTimeField(null=True, blank=True)
-    gemini_suggestion = models.TextField(blank=True, null=True, help_text="Gemini AI suggestion about this alert")
+    gemini_raw_suggestion = models.TextField(blank=True, null=True, help_text="Gemini AI raw suggestion text about this alert")
     alert_status = models.CharField(max_length=15, choices=ALERT_STATUS, default='standard', help_text="Status of the alert for notification purposes")
     notification_sent = models.BooleanField(default=False, help_text="Whether this alert has been sent to notification channels")
     
@@ -61,17 +61,31 @@ class Alert(models.Model):
         self.acknowledged_by = user_name
         self.acknowledged_at = timezone.now()
         self.save()
-    
-    @property
-    def created_at(self):
-        """Backward compatibility for templates that use created_at instead of timestamp."""
-        return self.timestamp
 
+class GeminiSuggestion(models.Model):
+    """Suggestions from Gemini AI about alerts"""
+    alert = models.OneToOneField(Alert, on_delete=models.CASCADE, related_name='gemini_suggestion')
+    should_notify = models.BooleanField(default=False, help_text="Whether Gemini suggests sending a notification")
+    assessment = models.CharField(max_length=255, default="No assessment available", help_text="Brief assessment (Yes/No)")
+    reasoning = models.TextField(default="No reasoning provided", help_text="Reasoning for the assessment")
+    suggested_actions = models.TextField(blank=True, null=True, help_text="Suggested actions to take")
+    confidence_score = models.FloatField(default=0.0, help_text="Confidence score (0.0 to 1.0)")
+    raw_response = models.JSONField(default=dict, help_text="Raw response from Gemini API")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Feedback fields
+    feedback_rating = models.IntegerField(null=True, blank=True, help_text="Rating given to this suggestion (1-5)")
+    feedback_notes = models.TextField(blank=True, null=True, help_text="Notes from admin feedback")
+    feedback_timestamp = models.DateTimeField(null=True, blank=True, help_text="When feedback was provided")
+    
+    def __str__(self):
+        return f"Gemini Suggestion for Alert #{self.alert.id}: {self.assessment}"
 
 class AlertNotificationConfig(models.Model):
     """
-    Configuration for alert notifications through various channels
-    like email, Slack, webhooks, etc.
+    Configuration for alert notifications through different channels
+    such as email, Slack, webhook, etc.
     """
     NOTIFICATION_TYPES = [
         ('email', 'Email'),
@@ -80,97 +94,34 @@ class AlertNotificationConfig(models.Model):
         ('sms', 'SMS')
     ]
     
-    name = models.CharField(max_length=255)
-    notification_type = models.CharField(max_length=10, choices=NOTIFICATION_TYPES)
-    is_active = models.BooleanField(default=True)
-    min_severity = models.CharField(max_length=10, choices=Alert.SEVERITY_LEVELS, default='medium',
-                                  help_text="Minimum severity level to trigger this notification")
-    recipients = models.TextField(help_text="Recipients, comma separated. For email: email addresses, for Slack: channel names, etc.")
-    configuration = models.JSONField(default=dict, help_text="Configuration details specific to the notification type")
+    name = models.CharField(max_length=100, help_text="A descriptive name for this configuration")
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, help_text="Channel type for notifications")
+    min_severity = models.CharField(max_length=10, choices=Alert.SEVERITY_LEVELS, default='high', 
+                                  help_text="Minimum severity level to trigger notification")
+    recipients = models.TextField(blank=True, null=True, 
+                                help_text="Recipients for the notification (comma-separated emails, Slack channels, etc.)")
+    configuration = models.JSONField(default=dict, help_text="Additional configuration in JSON format")
+    is_active = models.BooleanField(default=True, help_text="Whether this notification configuration is active")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"{self.name} ({self.get_notification_type_display()})"
     
     def should_notify(self, alert):
-        """Check if this alert should trigger a notification based on severity."""
-        severity_order = dict((severity[0], i) for i, severity in enumerate(Alert.SEVERITY_LEVELS))
-        return severity_order.get(alert.severity, 0) >= severity_order.get(self.min_severity, 0)
-
-
+        """Check if an alert should trigger this notification based on severity."""
+        severity_order = {'info': 0, 'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+        min_severity_level = severity_order.get(self.min_severity, 0)
+        alert_severity_level = severity_order.get(alert.severity, 0)
+        
+        return self.is_active and alert_severity_level >= min_severity_level
+        
 class AlertComment(models.Model):
-    """
-    Comments that can be added to alerts by users for collaboration and documentation.
-    """
+    """Comments on alerts from users"""
     alert = models.ForeignKey(Alert, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
     
-    class Meta:
-        ordering = ['-created_at']
-    
     def __str__(self):
-        return f"Comment on {self.alert.title} by {self.user.username if self.user else 'Unknown'}"
-
-
-class GeminiSuggestion(models.Model):
-    """Suggestions from Gemini AI about alerts"""
-    alert = models.OneToOneField('Alert', on_delete=models.CASCADE, related_name='ai_suggestion')
-    suggestion = models.CharField(max_length=50)  # e.g. "Yes", "No", "Maybe"
-    reasoning = models.TextField()
-    suggested_actions = models.TextField()
-    confidence_score = models.FloatField(default=0.0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    # Add feedback fields for the feedback loop
-    feedback_rating = models.IntegerField(null=True, blank=True, 
-                                         help_text="Rating from 1-5 on how accurate the suggestion was")
-    feedback_notes = models.TextField(blank=True, 
-                                     help_text="Additional notes or comments about the suggestion")
-    feedback_provided_by = models.ForeignKey(User, on_delete=models.SET_NULL, 
-                                           null=True, blank=True, 
-                                           related_name='gemini_feedback')
-    feedback_provided_at = models.DateTimeField(null=True, blank=True)
-    
-    def __str__(self):
-        return f"Gemini Suggestion for Alert #{self.alert_id}: {self.suggestion}"
-    
-    def provide_feedback(self, user, rating, notes=""):
-        """
-        Record feedback on this suggestion to improve future recommendations
-        
-        Args:
-            user: The User providing the feedback
-            rating: Integer from 1-5 on how accurate the suggestion was
-            notes: Optional text notes about the suggestion
-        """
-        self.feedback_rating = rating
-        self.feedback_notes = notes
-        self.feedback_provided_by = user
-        self.feedback_provided_at = timezone.now()
-        self.save()
-        
-        # Log this feedback for future analysis
-        from django.core.cache import cache
-        import json
-        
-        # Store feedback in a list in the cache for periodic processing
-        feedback_key = "gemini_feedback_queue"
-        feedback_data = {
-            "suggestion_id": self.id,
-            "alert_id": self.alert_id,
-            "alert_type": self.alert.alert_type,
-            "rating": rating,
-            "notes": notes,
-            "timestamp": timezone.now().isoformat()
-        }
-        
-        # Get current feedback queue
-        feedback_queue = cache.get(feedback_key, [])
-        feedback_queue.append(feedback_data)
-        
-        # Store back in cache
-        cache.set(feedback_key, feedback_queue)
-        
-        return True
+        return f"Comment on {self.alert} by {self.user.username}"

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Ignore Alert Suggestion - ARPF-TI{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'alerts:alert_list' %}"
+                    class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Alerts</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}"
+                    class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Alert Detail</a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-1 font-medium text-gray-500 md:ml-2">Ignore Alert Suggestion</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Ignore Alert Suggestion</h1>
+    <p class="mt-1 text-sm text-gray-600">You are about to ignore this alert suggestion</p>
+</div>
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-6">
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-900">{{ alert.title }}</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                {{ alert.timestamp|date:"F j, Y, H:i:s" }}
+                <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full 
+                    {% if alert.severity == 'critical' %}bg-red-100 text-red-800
+                    {% elif alert.severity == 'high' %}bg-orange-100 text-orange-800
+                    {% elif alert.severity == 'medium' %}bg-yellow-100 text-yellow-800
+                    {% elif alert.severity == 'low' %}bg-blue-100 text-blue-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ alert.get_severity_display }}
+                </span>
+            </p>
+        </div>
+
+        <div class="mb-6">
+            <p class="text-gray-700">Are you sure you want to ignore this alert suggestion? This action will mark the
+                alert as "ignored" and it will not be sent as a notification.</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-danger">Ignore Suggestion</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

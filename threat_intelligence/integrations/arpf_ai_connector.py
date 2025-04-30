@@ -31,6 +31,11 @@ class ARPFAIConnector:
         self.ip_reputation_cache = {}
         self.request_history = []
         self.max_history = 1000  # Maximum requests to keep in memory
+        self.known_bad_user_agents = self.known_attack_signatures.get('suspicious_user_agents', [])
+        self.threat_patterns = {'ip': set(), 'path': set(), 'user_agent': set()}
+        self.normal_traffic_patterns = {'common_paths': set(['/','index.html','/about','/login'])}
+        self.version = "2.3.0"
+        self.last_updated = timezone.now()
         logger.info(f"ARPF AI Connector initialized for source: {source}")
     
     def _load_attack_signatures(self):
@@ -514,294 +519,49 @@ class ARPFAIConnector:
         # This is a placeholder for behavioral analysis logic
         # In a real implementation, this would analyze patterns over time, request rates, etc.
         
+        # Look for recent requests from this IP
+        recent_requests = [req for req in self.request_history if req.get('source_ip') == ip]
+        
+        # If no history for this IP, return the default result
+        if not recent_requests:
+            return result
+            
+        # Get the most recent request path
+        latest_request = recent_requests[-1]
+        request_path = latest_request.get('path', '')
+        
         # Check if the access path is unusual for this IP
-        is_unusual_path = path not in self.normal_traffic_patterns['common_paths']
+        is_unusual_path = request_path not in self.normal_traffic_patterns['common_paths']
         
         # This would normally have more complex logic based on historical patterns
         # For now, just return a simple example
-        if is_unusual_path and '/admin/' in path:
-            return {
-                "score": 60,
-                "explanation": f"Unusual access pattern: accessing admin path from unrecognized IP"
+        if is_unusual_path and '/admin/' in request_path:
+            result = {
+                'is_threat': True,
+                'attack_type': 'suspicious_access',
+                'confidence': 60,
+                'explanation': f"Unusual access pattern: accessing admin path from unrecognized IP",
+                'recommended_action': 'monitor'
             }
+            return result
             
-        return None
+        return result
     
-    def _advanced_ai_analysis(self, request_data, preliminary_analysis, behavioral_analysis):
+    def _generate_rule_suggestion(self, analysis_result, request_data):
         """
-        Perform advanced AI-based analysis of the request.
-        This simulates what a real AI system would do, combining multiple
-        detection methods and machine learning to identify threats.
-        """
-        ip = request_data.get('source_ip', '')
-        path = request_data.get('path', '')
-        user_agent = request_data.get('user_agent', '')
-        headers = request_data.get('headers', {})
-        method = request_data.get('method', '')
-        query_params = request_data.get('query_params', {})
-        
-        # Create a feature vector from the request (in a real system, this would
-        # feed into a machine learning model)
-        features = {
-            # IP reputation (0-1)
-            'ip_reputation': self._get_ip_reputation_score(ip),
-            
-            # Request characteristics
-            'path_length': len(path) / 100,  # Normalize
-            'has_query_params': 1 if query_params else 0,
-            'is_admin_path': 1 if '/admin' in path or '/wp-admin' in path else 0,
-            'is_api_path': 1 if '/api' in path else 0,
-            'is_login_path': 1 if '/login' in path or '/signin' in path else 0,
-            
-            # Method risk (POST/PUT riskier than GET)
-            'method_risk': 0.7 if method in ['POST', 'PUT', 'DELETE'] else 0.3,
-            
-            # Entropy of path (randomness - higher can indicate obfuscation)
-            'path_entropy': self._calculate_entropy(path) / 5,  # Normalize
-            
-            # Preliminary analysis confidence
-            'prelim_confidence': (preliminary_analysis.get('confidence', 0) / 100) if preliminary_analysis else 0,
-            
-            # Behavioral analysis confidence
-            'behavioral_confidence': (behavioral_analysis.get('confidence', 0) / 100) if behavioral_analysis else 0
-        }
-        
-        # In a real system, these features would be fed to a trained ML model
-        # Here we'll use a simple scoring algorithm to simulate AI decision-making
-        threat_score = (
-            features['ip_reputation'] * 0.2 +
-            features['path_length'] * 0.05 +
-            features['has_query_params'] * 0.05 +
-            features['is_admin_path'] * 0.1 +
-            features['method_risk'] * 0.1 +
-            features['path_entropy'] * 0.1 +
-            features['prelim_confidence'] * 0.2 +
-            features['behavioral_confidence'] * 0.2
-        ) * 100  # Convert to 0-100 scale
-        
-        # Add some randomness for realistic behavior
-        threat_score += random.uniform(-5, 5)
-        threat_score = max(0, min(threat_score, 100))  # Ensure between 0-100
-        
-        # Determine attack type based on highest scores
-        attack_type = "unknown"
-        if preliminary_analysis and preliminary_analysis.get('confidence', 0) > 50:
-            attack_type = preliminary_analysis.get('attack_type', 'unknown')
-        elif behavioral_analysis and behavioral_analysis.get('confidence', 0) > 50:
-            attack_type = behavioral_analysis.get('attack_type', 'unknown')
-        elif features['is_admin_path'] > 0 and features['ip_reputation'] > 0.6:
-            attack_type = "unauthorized_access"
-        elif features['path_entropy'] > 0.7 and features['method_risk'] > 0.6:
-            attack_type = "obfuscated_attack"
-            
-        # Determine recommended action
-        if threat_score >= 80:
-            action = "block"
-        elif threat_score >= 60:
-            action = "alert"
-        else:
-            action = "allow"
-            
-        # Create explanation
-        explanation_parts = []
-        if threat_score >= 60:
-            if features['ip_reputation'] > 0.6:
-                explanation_parts.append("IP has poor reputation score")
-            if features['is_admin_path'] > 0 and features['ip_reputation'] > 0.5:
-                explanation_parts.append("Suspicious access to admin path")
-            if features['path_entropy'] > 0.7:
-                explanation_parts.append("Unusual path entropy detected (possible obfuscation)")
-            if features['method_risk'] > 0.6 and threat_score > 70:
-                explanation_parts.append(f"High-risk method ({method}) with suspicious characteristics")
-            if preliminary_analysis:
-                explanation_parts.append(preliminary_analysis.get('explanation', ''))
-            if behavioral_analysis:
-                explanation_parts.append(behavioral_analysis.get('explanation', ''))
-                
-        explanation = " ".join(explanation_parts) if explanation_parts else "No specific threats detected"
-            
-        return {
-            "attack_type": attack_type,
-            "confidence": round(threat_score, 1),
-            "recommended_action": action,
-            "explanation": explanation,
-            "ai_analysis": True,
-            "timestamp": timezone.now().isoformat()
-        }
-    
-    def _get_ip_reputation_score(self, ip):
-        """Get a reputation score for an IP address (0-1 scale, higher is worse)"""
-        # This would normally query threat intelligence databases
-        # For now, use a simple hash-based approach
-        if not ip:
-            return 0.5
-            
-        # Check if IP is in known threat patterns
-        if ip in self.threat_patterns['ip']:
-            return 0.9
-            
-        # Generate a pseudo-random score based on IP hash
-        ip_hash = int(hashlib.md5(ip.encode()).hexdigest(), 16) % 100
-        
-        # Bias score distribution - most IPs should be benign
-        if ip_hash < 70:  # 70% of IPs are good
-            return ip_hash / 200  # 0 - 0.35 range
-        elif ip_hash < 90:  # 20% are moderate
-            return 0.4 + ((ip_hash - 70) / 50)  # 0.4 - 0.8 range
-        else:  # 10% are bad
-            return 0.8 + ((ip_hash - 90) / 100)  # 0.8 - 0.9 range
-    
-    def _calculate_entropy(self, text):
-        """Calculate Shannon entropy of text (measure of randomness)"""
-        if not text:
-            return 0
-            
-        prob = {}
-        for char in text:
-            if char in prob:
-                prob[char] += 1
-            else:
-                prob[char] = 1
-                
-        entropy = 0
-        for i in prob.values():
-            p = i / len(text)
-            entropy -= p * (0 if p == 0 else (p.bit_length() - 1))
-            
-        return entropy
-        
-    def _combine_analyses(self, request_data, preliminary_analysis, behavioral_analysis, ai_analysis):
-        """
-        Combine multiple analyses into a final decision.
-        This implements an ensemble approach to threat detection.
-        """
-        ip = request_data.get('source_ip', '')
-        path = request_data.get('path', '')
-        
-        # Initialize with AI analysis as the baseline
-        if ai_analysis:
-            final_result = dict(ai_analysis)
-        else:
-            final_result = {
-                "attack_type": "unknown",
-                "confidence": 0,
-                "recommended_action": "allow",
-                "explanation": "No threats detected",
-                "source_ip": ip,
-                "request_path": path,
-                "timestamp": timezone.now().isoformat()
-            }
-            
-        # If preliminary analysis has higher confidence for a block, prefer it
-        if (preliminary_analysis and 
-                preliminary_analysis.get('confidence', 0) > final_result.get('confidence', 0) and
-                preliminary_analysis.get('recommended_action') == 'block'):
-            final_result = dict(preliminary_analysis)
-            final_result['detection_method'] = 'signature_based'
-            
-        # If behavioral analysis indicates a block with high confidence, prefer it
-        if (behavioral_analysis and 
-                behavioral_analysis.get('confidence', 0) > 80 and
-                behavioral_analysis.get('recommended_action') == 'block'):
-            final_result = dict(behavioral_analysis)
-            final_result['detection_method'] = 'behavioral'
-            
-        # Always include source IP and path
-        final_result['source_ip'] = ip
-        final_result['request_path'] = path
-        
-        # Add confidence qualitative assessment
-        if final_result.get('confidence', 0) >= 90:
-            final_result['confidence_level'] = 'very_high'
-        elif final_result.get('confidence', 0) >= 75:
-            final_result['confidence_level'] = 'high'
-        elif final_result.get('confidence', 0) >= 50:
-            final_result['confidence_level'] = 'medium'
-        elif final_result.get('confidence', 0) >= 25:
-            final_result['confidence_level'] = 'low'
-        else:
-            final_result['confidence_level'] = 'very_low'
-            
-        return final_result
-            
-    def _check_ip_threat(self, ip):
-        """
-        Check if an IP is from a suspicious source.
-        Returns a threat score from 0-100.
-        """
-        if not ip:
-            return 0
-            
-        threat_score = 0
-        
-        # Check if IP is in suspicious blocks
-        for country, cidr_blocks in self.suspicious_country_blocks.items():
-            for cidr in cidr_blocks:
-                try:
-                    if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr):
-                        threat_score += 60  # High baseline score for suspicious ranges
-                        logger.info(f"IP {ip} matched suspicious CIDR block {cidr} ({country})")
-                        break
-                except ValueError:
-                    continue
-        
-        # Check ThreatIntelEntry database for known malicious IPs
-        try:
-            if ThreatIntelEntry.objects.filter(entry_type='ip', value=ip, is_active=True).exists():
-                threat_score += 70
-                logger.info(f"IP {ip} matched known threat intelligence entry")
-        except Exception as e:
-            logger.error(f"Error checking threat intel for IP {ip}: {e}")
-        
-        # Cap the score at 100
-        return min(threat_score, 100)
-    
-    def _get_country_code(self, ip):
-        """Get country code for an IP address."""
-        # This would normally use a GeoIP database or service
-        # For demonstration, we'll return a dummy value
-        if not ip:
-            return None
-        
-        # Dummy country mapping for demonstration
-        dummy_mappings = {
-            "185.220": "RU",
-            "89.248": "CN", 
-            "134.209": "IR",
-            "103.103": "KP",
-            "45.227": "VE",
-            "91.192": "BY",
-            "103.195": "RU",
-            "193.163": "RU"
-        }
-        
-        # Check if IP prefix matches any in our dummy mappings
-        for prefix, country in dummy_mappings.items():
-            if ip.startswith(prefix):
-                return country
-                
-        return None
-        
-    def _add_firewall_rule_suggestion(self, analysis_result, request_data):
-        """
-        Add a firewall rule suggestion to the analysis result if the threat is detected.
-        Also store the suggestion in the database for admin review.
+        Generate a firewall rule suggestion based on the threat analysis.
         
         Args:
-            analysis_result: The analysis result from the AI system
+            analysis_result: The results of the threat analysis
             request_data: The original request data
             
         Returns:
-            The enhanced analysis result with rule suggestion
+            dict: A suggested firewall rule
         """
-        if not analysis_result or analysis_result.get('recommended_action') != 'block':
-            return analysis_result
-        
-        # Skip if confidence is too low
-        confidence = analysis_result.get('confidence', 0)
-        if confidence < 70:  # Only suggest rules for medium-to-high confidence threats
-            return analysis_result
-        
+        # Skip if not a threat or confidence is too low
+        if not analysis_result.get('is_threat', False) or analysis_result.get('confidence', 0) < 75:
+            return None
+            
         # Get relevant data
         attack_type = analysis_result.get('attack_type', 'unknown')
         source_ip = request_data.get('source_ip', '')
@@ -813,191 +573,305 @@ class ARPFAIConnector:
         pattern = ''
         description = f"Auto-suggested rule for {attack_type} attack"
         
-        if attack_type in ['sql_injection', 'xss', 'path_traversal', 'command_injection', 'obfuscated_attack']:
+        if attack_type in ['sql_injection', 'xss', 'path_traversal', 'command_injection']:
             rule_type = 'path'
             pattern = request_path
-            description = f"Blocking path due to detected {attack_type} attack"
-        elif attack_type in ['suspicious_source', 'blocked_country', 'high_request_rate']:
+            description = f"Block path due to detected {attack_type} attack"
+        elif attack_type in ['suspicious_source', 'tor_exit_node', 'scanner', 'attack_source', 'scanning']:
             rule_type = 'ip'
             pattern = source_ip
-            description = f"Blocking IP associated with {attack_type}"
+            description = f"Block IP associated with {attack_type}"
         elif attack_type == 'suspicious_user_agent':
             rule_type = 'user_agent'
             pattern = user_agent
-            description = f"Blocking suspicious user agent: {user_agent}"
-        elif attack_type == 'scanning':
+            description = f"Block suspicious user agent: {user_agent[:30]}..." if len(user_agent) > 30 else user_agent
+        elif attack_type == 'suspicious_access':
             rule_type = 'ip'
             pattern = source_ip
-            description = f"Blocking IP performing scanning activity"
+            description = f"Block IP attempting suspicious access: {source_ip}"
         
         # Create rule suggestion
-        try:
-            # Check if this exact rule has been suggested recently
-            existing = SuggestedFirewallRule.objects.filter(
-                rule_type=rule_type,
-                pattern=pattern,
-                created_at__gte=timezone.now() - timezone.timedelta(hours=24)
-            ).exists()
-            
-            if not existing:
-                suggestion = SuggestedFirewallRule(
-                    rule_type=rule_type,
-                    pattern=pattern,
-                    description=description,
-                    confidence=confidence,
-                    attack_type=attack_type,
-                    source_ip=source_ip,
-                    request_path=request_path,
-                    # Auto-approve high confidence threats
-                    status='auto_approved' if confidence >= 90 else 'pending'
-                )
-                suggestion.save()
-                
-                # Auto-apply rules with very high confidence
-                if confidence >= 90:
-                    rule = suggestion.approve()
-                    logger.info(f"Auto-applied firewall rule: {description}")
-        
-        except Exception as e:
-            logger.error(f"Error creating firewall rule suggestion: {str(e)}")
-        
-        # Add suggestion to analysis result
-        analysis_result['rule_suggestion'] = {
-            'type': rule_type,
+        return {
+            'rule_type': rule_type,
             'pattern': pattern,
-            'description': description
+            'description': description,
+            'confidence': analysis_result.get('confidence', 0),
+            'recommended_action': analysis_result.get('recommended_action', 'block')
         }
         
-        return analysis_result
-    
-    def _update_learning_database(self, request_data, analysis_result):
+    def _update_learned_patterns(self, request_data, analysis_result):
         """
-        Update the learning database with new information.
-        This enables the ARPF AI system to continuously learn from new data.
-        """
-        # Only learn from high-confidence detections or confirmed benign traffic
-        confidence = analysis_result.get('confidence', 0)
-        action = analysis_result.get('recommended_action')
-        
-        # Don't update the database if we're in a gray area
-        if 30 < confidence < 70:
-            return
-            
-        # For now, just log that we would update the database
-        if confidence >= 70:
-            logger.debug(f"ARPF AI: Learning new malicious pattern: {analysis_result.get('attack_type')} with confidence {confidence}")
-        elif confidence <= 30:
-            logger.debug(f"ARPF AI: Updating benign traffic pattern for path {request_data.get('path')}")
-    
-    def analyze_traffic_patterns(self, time_period_days=7):
-        """
-        Analyze traffic patterns over time to detect trends and anomalies.
-        This is a new feature specific to the ARPF AI implementation.
+        Update learned patterns based on analysis results.
+        This enables continuous learning from detected threats.
         
         Args:
-            time_period_days: Number of days of traffic to analyze
+            request_data: The original request data
+            analysis_result: The results of the threat analysis
+        """
+        # Only learn from high-confidence detections
+        confidence = analysis_result.get('confidence', 0)
+        if confidence < 75 or not analysis_result.get('is_threat', False):
+            return
+            
+        # Get relevant data
+        source_ip = request_data.get('source_ip', '')
+        request_path = request_data.get('path', '')
+        user_agent = request_data.get('user_agent', '')
+        
+        # Update threat patterns
+        if source_ip and confidence >= 85:
+            self.threat_patterns['ip'].add(source_ip)
+            
+        if request_path and confidence >= 85 and analysis_result.get('attack_type') in ['sql_injection', 'xss', 'path_traversal', 'command_injection']:
+            self.threat_patterns['path'].add(request_path)
+            
+        if user_agent and confidence >= 90 and analysis_result.get('attack_type') == 'suspicious_user_agent':
+            self.threat_patterns['user_agent'].add(user_agent)
+            
+        # Log the learning event
+        logger.debug(f"ARPF AI: Learned new pattern for {analysis_result.get('attack_type')} with confidence {confidence}")
+    
+    def analyze_traffic_patterns(self, days=7, request_history=None):
+        """
+        Analyze traffic patterns from request history to identify potential threats and generate insights.
+        
+        Args:
+            days: Number of days of logs to analyze (default: 7)
+            request_history: Optional request history to analyze (if None, uses self.request_history)
             
         Returns:
-            dict: Analysis results with detected patterns and anomalies
+            dict: Analysis results including identified patterns and suggested rules
         """
-        logger.info(f"ARPF AI: Analyzing traffic patterns for past {time_period_days} days")
+        logger.info(f"Analyzing traffic patterns from the past {days} days")
         
-        # This would normally analyze actual traffic logs
-        # For now, return a simulated analysis
+        # Use provided request history or class request history
+        history = request_history if request_history is not None else self.request_history
         
-        # Simulate analyzing a week of traffic
-        start_date = timezone.now() - timezone.timedelta(days=time_period_days)
+        # Filter history by date if needed
+        if days > 0:
+            cutoff_time = timezone.now() - timezone.timedelta(days=days)
+            history = [req for req in history if req.get('timestamp', timezone.now()) >= cutoff_time]
         
-        # Generate some insights
-        insights = [
-            {
-                "type": "traffic_spike",
-                "description": "Abnormal traffic spike detected from Asia/Pacific region",
-                "confidence": 85,
-                "recommended_action": "monitor",
-                "affected_routes": ["/api/v1/users", "/api/v1/products"],
-                "timestamp": (timezone.now() - timezone.timedelta(days=2)).isoformat()
-            },
-            {
-                "type": "attack_campaign",
-                "description": "Coordinated login attempt campaign detected",
-                "confidence": 92,
-                "recommended_action": "block",
-                "ip_range": "103.195.0.0/16",
-                "timestamp": (timezone.now() - timezone.timedelta(days=1)).isoformat()
-            },
-            {
-                "type": "vulnerability_probing",
-                "description": "Multiple IPs probing for log4j vulnerability",
-                "confidence": 78,
-                "recommended_action": "alert",
-                "paths": ["/api/test", "/?x=${jndi:ldap://malicious/payload}"],
-                "timestamp": (timezone.now() - timezone.timedelta(days=3)).isoformat()
-            }
-        ]
-        
-        # New rules that could be created based on this analysis
-        suggested_rules = []
-        for insight in insights:
-            if insight["confidence"] >= 80 and insight["recommended_action"] == "block":
-                suggested_rules.append({
-                    "rule_type": "ip_range" if "ip_range" in insight else "path",
-                    "pattern": insight.get("ip_range") or insight.get("paths", [""])[0],
-                    "description": f"Created from ARPF AI traffic analysis: {insight['description']}",
-                    "confidence": insight["confidence"]
-                })
-        
-        return {
-            "period_start": start_date.isoformat(),
-            "period_end": timezone.now().isoformat(),
-            "total_requests_analyzed": random.randint(50000, 500000),
-            "unique_ips": random.randint(1000, 5000),
-            "unique_paths": random.randint(100, 500),
-            "blocked_requests": random.randint(100, 1000),
-            "insights": insights,
-            "suggested_rules": suggested_rules,
-            "summary": f"ARPF AI analyzed traffic patterns from {start_date.strftime('%Y-%m-%d')} to {timezone.now().strftime('%Y-%m-%d')} and identified {len(insights)} significant patterns."
+        # Initialize results structure
+        results = {
+            'analyzed_requests': len(history),
+            'identified_patterns': [],
+            'suggested_rules': [],
+            'timestamp': timezone.now().isoformat()
         }
-    
-    def get_model_details(self):
-        """
-        Get details about the current ARPF AI model.
-        """
-        return {
-            "name": "ARPF AI Defense",
-            "version": self.version,
-            "last_updated": self.last_updated.strftime("%Y-%m-%d"),
-            "capabilities": [
-                "Real-time threat detection",
-                "Behavioral analysis",
-                "Pattern recognition",
-                "Anomaly detection",
-                "Automated rule generation",
-                "Adaptive defense"
-            ],
-            "threat_patterns_count": sum(len(patterns) for patterns in self.threat_patterns.values()),
-            "status": "active"
-        }
-    
-    def update_model(self):
-        """
-        Update the ARPF AI model with the latest threat intelligence.
-        In a real implementation, this would retrain or update the AI model.
-        """
-        # Simulate updating the model
-        self.last_model_update = timezone.now()
-        self.version = "2.3.1"  # Would normally increment version
         
-        # Reload threat patterns
-        self.threat_patterns = self._load_threat_patterns()
+        if not history:
+            logger.warning("No request history available for traffic pattern analysis")
+            return results
         
-        # Recalculate baseline traffic
-        self.normal_traffic_patterns = self._calculate_baseline_traffic()
+        # Group requests by source IP
+        ip_groups = {}
+        for req in history:
+            ip = req.get('source_ip')
+            if not ip:
+                continue
+                
+            if ip not in ip_groups:
+                ip_groups[ip] = []
+            ip_groups[ip].append(req)
         
-        logger.info(f"ARPF AI model updated to version {self.version}")
+        # Analyze high-frequency IPs (potential scanning or brute force)
+        for ip, requests in ip_groups.items():
+            if len(requests) >= 50:  # Threshold for high frequency
+                # Calculate request rate (requests per minute)
+                if len(requests) >= 2:
+                    # Sort by timestamp
+                    sorted_reqs = sorted(requests, key=lambda x: x.get('timestamp', timezone.now()))
+                    time_span = (sorted_reqs[-1].get('timestamp', timezone.now()) - 
+                                sorted_reqs[0].get('timestamp', timezone.now()))
+                    minutes = time_span.total_seconds() / 60.0 if time_span.total_seconds() > 0 else 1.0
+                    req_per_min = len(requests) / minutes
+                    
+                    if req_per_min >= 10:  # More than 10 requests per minute
+                        # Check request paths
+                        paths = [req.get('path', '') for req in requests]
+                        unique_paths = len(set(paths))
+                        
+                        # Potential scanner (many unique paths)
+                        if unique_paths >= 10:
+                            pattern = {
+                                'type': 'scanning',
+                                'source_ip': ip,
+                                'requests': len(requests),
+                                'unique_paths': unique_paths,
+                                'req_per_min': round(req_per_min, 2),
+                                'confidence': min(95, 60 + int(req_per_min / 2))
+                            }
+                            results['identified_patterns'].append(pattern)
+                            
+                            # Add suggested rule
+                            rule = {
+                                'rule_type': 'ip',
+                                'pattern': ip,
+                                'description': f"Block scanning IP (detected {unique_paths} unique paths, {round(req_per_min, 1)} req/min)",
+                                'confidence': pattern['confidence'],
+                                'recommended_action': 'block'
+                            }
+                            results['suggested_rules'].append(rule)
+                        
+                        # Potential brute force (few unique paths, high frequency)
+                        elif unique_paths <= 3 and req_per_min >= 15:
+                            # Check if paths contain login/admin endpoints
+                            login_paths = [p for p in paths if any(term in p.lower() for term in ['login', 'admin', 'user', 'auth'])]
+                            if login_paths:
+                                pattern = {
+                                    'type': 'brute_force',
+                                    'source_ip': ip,
+                                    'requests': len(requests),
+                                    'target_path': max(set(paths), key=paths.count),
+                                    'req_per_min': round(req_per_min, 2),
+                                    'confidence': min(90, 65 + int(req_per_min / 2))
+                                }
+                                results['identified_patterns'].append(pattern)
+                                
+                                # Add suggested rule
+                                rule = {
+                                    'rule_type': 'ip',
+                                    'pattern': ip,
+                                    'description': f"Block potential brute force attack ({round(req_per_min, 1)} req/min to login)",
+                                    'confidence': pattern['confidence'],
+                                    'recommended_action': 'block'
+                                }
+                                results['suggested_rules'].append(rule)
         
-        return {
-            "success": True,
-            "version": self.version,
-            "updated_at": self.last_model_update.isoformat()
-        }
+        # Analyze for user agent patterns
+        ua_counts = {}
+        for req in history:
+            ua = req.get('user_agent', '')
+            if not ua:
+                continue
+                
+            if ua not in ua_counts:
+                ua_counts[ua] = 0
+            ua_counts[ua] += 1
+            
+        # Find suspicious user agents
+        for ua, count in ua_counts.items():
+            if count >= 10:  # Threshold for analysis
+                # Check against known patterns
+                for pattern in self.known_bad_user_agents:
+                    if re.search(pattern, ua, re.IGNORECASE):
+                        ua_pattern = {
+                            'type': 'suspicious_user_agent',
+                            'user_agent': ua,
+                            'requests': count,
+                            'matching_pattern': pattern,
+                            'confidence': min(95, 70 + (count // 5))
+                        }
+                        results['identified_patterns'].append(ua_pattern)
+                        
+                        # Add suggested rule if high confidence
+                        if ua_pattern['confidence'] >= 80:
+                            rule = {
+                                'rule_type': 'user_agent',
+                                'pattern': ua,
+                                'description': f"Block suspicious user agent: {ua[:40]}..." if len(ua) > 40 else ua,
+                                'confidence': ua_pattern['confidence'],
+                                'recommended_action': 'block'
+                            }
+                            results['suggested_rules'].append(rule)
+                        break
+        
+        # Analyze for attack patterns (SQL injection, XSS, etc.)
+        attack_paths = {}
+        for attack_type, patterns in self.known_attack_signatures.items():
+            if attack_type == 'suspicious_user_agents':
+                continue  # Already handled above
+                
+            attack_paths[attack_type] = []
+            
+            # Check paths against attack patterns
+            for req in history:
+                path = req.get('path', '')
+                if not path:
+                    continue
+                    
+                for pattern in patterns:
+                    if re.search(pattern, path, re.IGNORECASE):
+                        # Calculate confidence
+                        confidence = self._calculate_signature_confidence(attack_type, pattern, path)
+                        
+                        # Only consider medium-high confidence matches
+                        if confidence >= 65:
+                            attack_paths[attack_type].append({
+                                'path': path,
+                                'source_ip': req.get('source_ip', ''),
+                                'timestamp': req.get('timestamp', timezone.now()),
+                                'confidence': confidence,
+                                'pattern': pattern
+                            })
+                        break
+        
+        # Add detected attack patterns to results
+        for attack_type, detections in attack_paths.items():
+            if detections:
+                # Group by source IP to detect repeat offenders
+                ip_attack_counts = {}
+                for detection in detections:
+                    ip = detection.get('source_ip', '')
+                    if ip:
+                        if ip not in ip_attack_counts:
+                            ip_attack_counts[ip] = 0
+                        ip_attack_counts[ip] += 1
+                
+                # Find IPs with multiple detected attacks
+                for ip, count in ip_attack_counts.items():
+                    if count >= 3:  # Threshold for repeat attacks
+                        pattern = {
+                            'type': attack_type,
+                            'source_ip': ip,
+                            'attack_count': count,
+                            'confidence': min(95, 70 + (count * 5))
+                        }
+                        results['identified_patterns'].append(pattern)
+                        
+                        # Add suggested rule
+                        rule = {
+                            'rule_type': 'ip',
+                            'pattern': ip,
+                            'description': f"Block IP with multiple {attack_type.replace('_', ' ')} attacks",
+                            'confidence': pattern['confidence'],
+                            'recommended_action': 'block'
+                        }
+                        results['suggested_rules'].append(rule)
+                
+                # For high-confidence detections, suggest pattern-based rules
+                high_conf_detections = [d for d in detections if d.get('confidence', 0) >= 85]
+                if high_conf_detections:
+                    # Group similar paths
+                    path_patterns = {}
+                    for detection in high_conf_detections:
+                        path = detection.get('path', '')
+                        # Simplify path to create a pattern (remove specific IDs, etc.)
+                        simplified = re.sub(r'\d+', 'X', path)
+                        simplified = re.sub(r'=[^&]+', '=X', simplified)
+                        
+                        if simplified not in path_patterns:
+                            path_patterns[simplified] = []
+                        path_patterns[simplified].append(detection)
+                    
+                    # Suggest rules for common patterns
+                    for simplified, matches in path_patterns.items():
+                        if len(matches) >= 2:  # Multiple matches for same pattern
+                            avg_confidence = sum(m.get('confidence', 0) for m in matches) / len(matches)
+                            
+                            # Create path pattern rule
+                            rule = {
+                                'rule_type': 'path_pattern',
+                                'pattern': simplified,
+                                'description': f"Block {attack_type.replace('_', ' ')} attack pattern",
+                                'confidence': min(95, int(avg_confidence)),
+                                'recommended_action': 'block'
+                            }
+                            results['suggested_rules'].append(rule)
+        
+        # Log summary
+        logger.info(f"Traffic pattern analysis complete: found {len(results['identified_patterns'])} patterns "
+                   f"and suggested {len(results['suggested_rules'])} rules")
+        
+        return results

@@ -5,6 +5,7 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 import json
 import csv
+import logging
 from .models import Alert, AlertNotificationConfig, AlertComment
 from .alert_system import alert_system
 from .gemini_integration import gemini_integration
@@ -12,13 +13,23 @@ from .gemini_integration import gemini_integration
 @login_required
 def alert_list(request):
     """Display a list of all alerts with filtering options."""
-    alerts = Alert.objects.all().order_by('-timestamp')
+    # Get the current tab from the query parameters
+    current_tab = request.GET.get('tab', 'all')
     
-    # Filtering options
+    # Initialize queryset based on the selected tab
+    if current_tab == 'suggested':
+        alerts = Alert.objects.filter(alert_status='suggested').order_by('-timestamp')
+    elif current_tab == 'confirmed':
+        alerts = Alert.objects.filter(alert_status='confirmed').order_by('-timestamp')
+    elif current_tab == 'standard':
+        alerts = Alert.objects.filter(alert_status='standard').order_by('-timestamp')
+    else:  # 'all' tab or any other value
+        alerts = Alert.objects.all().order_by('-timestamp')
+    
+    # Additional filtering options
     severity_filter = request.GET.get('severity')
     acknowledged_filter = request.GET.get('acknowledged')
     type_filter = request.GET.get('type')
-    status_filter = request.GET.get('status', '')
     
     if severity_filter:
         alerts = alerts.filter(severity=severity_filter)
@@ -29,24 +40,21 @@ def alert_list(request):
     
     if type_filter:
         alerts = alerts.filter(alert_type=type_filter)
-        
-    if status_filter:
-        alerts = alerts.filter(alert_status=status_filter)
     
-    # Separate alerts into different categories
-    suggested_alerts = Alert.objects.filter(alert_status='suggested').order_by('-timestamp')
-    sent_alerts = Alert.objects.filter(alert_status='confirmed').order_by('-timestamp')
-    standard_alerts = Alert.objects.filter(alert_status='standard').order_by('-timestamp')
+    # Fetch counts for each category for the badges
+    suggested_alerts_count = Alert.objects.filter(alert_status='suggested').count()
+    confirmed_alerts_count = Alert.objects.filter(alert_status='confirmed').count()
+    standard_alerts_count = Alert.objects.filter(alert_status='standard').count()
     
     context = {
         'alerts': alerts,
-        'suggested_alerts': suggested_alerts,
-        'sent_alerts': sent_alerts,
-        'standard_alerts': standard_alerts,
+        'current_tab': current_tab,
+        'suggested_alerts_count': suggested_alerts_count,
+        'confirmed_alerts_count': confirmed_alerts_count,
+        'standard_alerts_count': standard_alerts_count,
         'severity_filter': severity_filter,
         'acknowledged_filter': acknowledged_filter,
         'type_filter': type_filter,
-        'status_filter': status_filter,
         'alert_types': Alert.ALERT_TYPES,
         'severity_levels': Alert.SEVERITY_LEVELS,
         'alert_statuses': Alert.ALERT_STATUS
@@ -79,128 +87,87 @@ def alert_acknowledge(request, alert_id):
     return render(request, 'alerts/alert_acknowledge.html', {'alert': alert})
 
 @login_required
-def notification_config_list(request):
-    """Display a list of notification configurations."""
-    configs = AlertNotificationConfig.objects.all()
-    return render(request, 'alerts/notification_config_list.html', {'configs': configs})
+def confirm_alert(request, alert_id):
+    """Confirm an alert suggestion and send it to notification channels."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    if request.method == 'POST':
+        # Update alert status to confirmed
+        alert.alert_status = 'confirmed'
+        
+        # Send the alert to notification channels
+        notification_success = alert_system.send_notifications(alert)
+        
+        # Mark the alert as having notifications sent
+        if notification_success:
+            alert.notification_sent = True
+            messages.success(request, f'Alert #{alert.id} has been confirmed and sent to notification channels.')
+        else:
+            messages.warning(request, f'Alert #{alert.id} has been confirmed but notification sending failed. Check notification settings.')
+        
+        alert.save()
+        
+        # If AJAX request, return JSON response
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success'})
+        
+        return redirect('alerts:alert_list')
+    
+    return render(request, 'alerts/alert_confirm.html', {'alert': alert})
 
 @login_required
-def notification_config_add(request):
-    """Add a new notification configuration."""
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        notification_type = request.POST.get('notification_type')
-        min_severity = request.POST.get('min_severity')
-        recipients = request.POST.get('recipients')
-        
-        # JSON configuration based on notification type
-        configuration = {}
-        if notification_type == 'email':
-            # Email specific config
-            pass
-        elif notification_type == 'slack':
-            configuration['webhook_url'] = request.POST.get('webhook_url')
-        elif notification_type == 'webhook':
-            configuration['webhook_url'] = request.POST.get('webhook_url')
-            configuration['headers'] = request.POST.get('headers', '{}')
-        
-        config = AlertNotificationConfig(
-            name=name,
-            notification_type=notification_type,
-            min_severity=min_severity,
-            recipients=recipients,
-            configuration=configuration,
-            is_active=True
-        )
-        config.save()
-        
-        messages.success(request, 'Notification configuration created successfully.')
-        return redirect('alerts:notification_config_list')
+def ignore_alert_suggestion(request, alert_id):
+    """Ignore an alert suggestion."""
+    alert = get_object_or_404(Alert, id=alert_id)
     
-    context = {
-        'notification_types': AlertNotificationConfig.NOTIFICATION_TYPES,
-        'severity_levels': Alert.SEVERITY_LEVELS
+    if request.method == 'POST':
+        # Update alert status to ignored
+        alert.alert_status = 'ignored'
+        alert.save()
+        
+        messages.success(request, f'Alert #{alert.id} suggestion has been ignored.')
+        
+        # If AJAX request, return JSON response
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success'})
+        
+        return redirect('alerts:alert_list')
+    
+    return render(request, 'alerts/alert_ignore.html', {'alert': alert})
+
+@login_required
+def view_gemini_suggestion(request, alert_id):
+    """View Gemini's suggestion for an alert."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    # Get the GeminiSuggestion object for this alert
+    try:
+        suggestion = alert.gemini_suggestion
+        if suggestion is None:
+            # If no suggestion exists yet, generate one
+            suggestion = gemini_integration.analyze_alert(alert)
+            if not suggestion:
+                messages.error(request, "Could not generate AI analysis for this alert.")
+                return redirect('alerts:alert_detail', alert_id=alert.id)
+    except Exception as e:
+        messages.error(request, f"Error retrieving AI analysis: {str(e)}")
+        return redirect('alerts:alert_detail', alert_id=alert.id)
+    
+    # Prepare data for the template
+    suggestion_data = {
+        'suggestion': suggestion.assessment,
+        'reasoning': suggestion.reasoning,
+        'suggested_actions': suggestion.suggested_actions,
+        'confidence_score': suggestion.confidence_score,
+        'additional_info': getattr(suggestion, 'additional_info', None)
     }
     
-    return render(request, 'alerts/notification_config_form.html', context)
-
-@login_required
-def notification_config_edit(request, config_id):
-    """Edit an existing notification configuration."""
-    config = get_object_or_404(AlertNotificationConfig, id=config_id)
-    
-    if request.method == 'POST':
-        config.name = request.POST.get('name')
-        config.notification_type = request.POST.get('notification_type')
-        config.min_severity = request.POST.get('min_severity')
-        config.recipients = request.POST.get('recipients')
-        config.is_active = request.POST.get('is_active') == 'on'
-        
-        # Update configuration based on notification type
-        configuration = {}
-        if config.notification_type == 'email':
-            # Email specific config
-            pass
-        elif config.notification_type == 'slack':
-            configuration['webhook_url'] = request.POST.get('webhook_url')
-        elif config.notification_type == 'webhook':
-            configuration['webhook_url'] = request.POST.get('webhook_url')
-            configuration['headers'] = request.POST.get('headers', '{}')
-        
-        config.configuration = configuration
-        config.save()
-        
-        messages.success(request, 'Notification configuration updated successfully.')
-        return redirect('alerts:notification_config_list')
-    
     context = {
-        'config': config,
-        'notification_types': AlertNotificationConfig.NOTIFICATION_TYPES,
-        'severity_levels': Alert.SEVERITY_LEVELS
+        'alert': alert,
+        'suggestion_data': suggestion_data
     }
     
-    return render(request, 'alerts/notification_config_form.html', context)
-
-@login_required
-def notification_config_delete(request, config_id):
-    """Delete a notification configuration."""
-    config = get_object_or_404(AlertNotificationConfig, id=config_id)
-    
-    if request.method == 'POST':
-        config.delete()
-        messages.success(request, 'Notification configuration deleted successfully.')
-        return redirect('alerts:notification_config_list')
-    
-    return render(request, 'alerts/notification_config_confirm_delete.html', {'config': config})
-
-@login_required
-def notification_config_test(request, config_id):
-    """Test a notification configuration by sending a test alert."""
-    config = get_object_or_404(AlertNotificationConfig, id=config_id)
-    
-    if request.method == 'POST' or request.method == 'GET':
-        try:
-            # Create a test alert content
-            test_message = {
-                'title': 'Test Alert',
-                'message': f'This is a test alert sent from ARPF-TI at {timezone.now()}',
-                'severity': config.min_severity,
-                'source': 'Manual test',
-                'timestamp': timezone.now().isoformat()
-            }
-            
-            # Use the alert system to send the test notification
-            success = alert_system.send_notification(config, test_message)
-            
-            if success:
-                messages.success(request, f'Test notification sent successfully using {config.name}.')
-            else:
-                messages.error(request, f'Failed to send test notification using {config.name}.')
-        
-        except Exception as e:
-            messages.error(request, f'Error sending test notification: {str(e)}')
-    
-    return redirect('alerts:notification_config_list')
+    return render(request, 'alerts/alert_suggestion_detail.html', context)
 
 @login_required
 def add_comment(request, alert_id):
@@ -227,6 +194,7 @@ def mark_as_false_positive(request, alert_id):
     """Mark an alert as a false positive."""
     alert = get_object_or_404(Alert, id=alert_id)
     
+    # Mark as false positive
     alert.is_false_positive = True
     alert.acknowledge(request.user.username)
     alert.save()
@@ -304,107 +272,191 @@ def export_alert(request, alert_id):
         return response
 
 @login_required
-def generate_alert_suggestions(request):
-    """Generate alert suggestions using Gemini AI for all unacknowledged standard alerts."""
+def notification_config_list(request):
+    """Display a list of notification configurations."""
+    configs = AlertNotificationConfig.objects.all()
+    return render(request, 'alerts/notification_config_list.html', {'configs': configs})
+
+@login_required
+def notification_config_add(request):
+    """Add a new notification configuration."""
     if request.method == 'POST':
-        # Get all unacknowledged standard alerts without suggestions
-        alerts = Alert.objects.filter(
-            is_acknowledged=False, 
-            alert_status='standard',
-            gemini_suggestion__isnull=True
+        name = request.POST.get('name')
+        notification_type = request.POST.get('notification_type')
+        min_severity = request.POST.get('min_severity')
+        recipients = request.POST.get('recipients')
+        is_active = request.POST.get('is_active') == 'on'
+        
+        # JSON configuration based on notification type
+        configuration = {}
+        if notification_type == 'email':
+            # Email specific config
+            configuration['smtp_port'] = request.POST.get('smtp_port')
+            configuration['use_tls'] = request.POST.get('use_tls') == 'on'
+        elif notification_type == 'slack':
+            configuration['webhook_url'] = request.POST.get('webhook_url')
+        elif notification_type == 'webhook':
+            configuration['webhook_url'] = request.POST.get('webhook_url')
+            configuration['headers'] = request.POST.get('headers', '{}')
+        elif notification_type == 'sms':
+            configuration['provider'] = request.POST.get('provider')
+            configuration['api_key'] = request.POST.get('api_key')
+        
+        config = AlertNotificationConfig(
+            name=name,
+            notification_type=notification_type,
+            min_severity=min_severity,
+            recipients=recipients,
+            configuration=configuration,
+            is_active=is_active
         )
+        config.save()
         
-        suggestion_count = 0
-        for alert in alerts:
-            # Get suggestion from Gemini
-            suggestion_result = gemini_integration.analyze_alert(alert)
-            
-            # Save suggestion to alert
-            alert.gemini_suggestion = json.dumps(suggestion_result)
-            
-            # If Gemini suggests sending the alert, mark it as suggested
-            if suggestion_result.get('suggestion', '').startswith('Yes'):
-                alert.alert_status = 'suggested'
-                suggestion_count += 1
-            
-            alert.save()
-        
-        messages.success(request, f'Generated {suggestion_count} new alert suggestions.')
-        return redirect('alerts:alert_list')
-    
-    return redirect('alerts:alert_list')
-
-@login_required
-def confirm_alert(request, alert_id):
-    """Confirm an alert suggestion and send it to notification channels."""
-    alert = get_object_or_404(Alert, id=alert_id)
-    
-    if request.method == 'POST':
-        # Update alert status to confirmed
-        alert.alert_status = 'confirmed'
-        alert.save()
-        
-        # Send the alert to notification channels
-        alert_system.send_notifications(alert)
-        
-        # Mark the alert as having notifications sent
-        alert.notification_sent = True
-        alert.save()
-        
-        messages.success(request, f'Alert #{alert.id} has been confirmed and sent to notification channels.')
-        
-        # If AJAX request, return JSON response
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'success'})
-        
-        return redirect('alerts:alert_list')
-    
-    return render(request, 'alerts/alert_confirm.html', {'alert': alert})
-
-@login_required
-def ignore_alert_suggestion(request, alert_id):
-    """Ignore an alert suggestion."""
-    alert = get_object_or_404(Alert, id=alert_id)
-    
-    if request.method == 'POST':
-        # Update alert status to ignored
-        alert.alert_status = 'ignored'
-        alert.save()
-        
-        messages.success(request, f'Alert #{alert.id} suggestion has been ignored.')
-        
-        # If AJAX request, return JSON response
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'success'})
-        
-        return redirect('alerts:alert_list')
-    
-    return render(request, 'alerts/alert_ignore.html', {'alert': alert})
-
-@login_required
-def view_gemini_suggestion(request, alert_id):
-    """View Gemini's suggestion for an alert."""
-    alert = get_object_or_404(Alert, id=alert_id)
-    
-    # If no suggestion exists yet, generate one
-    if not alert.gemini_suggestion:
-        suggestion_result = gemini_integration.analyze_alert(alert)
-        alert.gemini_suggestion = json.dumps(suggestion_result)
-        alert.save()
-    
-    # Parse the suggestion JSON
-    try:
-        suggestion_data = json.loads(alert.gemini_suggestion)
-    except (json.JSONDecodeError, TypeError):
-        suggestion_data = {
-            'suggestion': 'Error parsing suggestion data',
-            'reasoning': 'The stored suggestion data is not valid JSON.',
-            'suggested_actions': 'Please regenerate the suggestion.'
-        }
+        messages.success(request, 'Notification configuration created successfully.')
+        return redirect('alerts:notification_config_list')
     
     context = {
-        'alert': alert,
-        'suggestion_data': suggestion_data
+        'notification_types': AlertNotificationConfig.NOTIFICATION_TYPES,
+        'severity_levels': Alert.SEVERITY_LEVELS
     }
     
-    return render(request, 'alerts/alert_suggestion_detail.html', context)
+    return render(request, 'alerts/notification_config_form.html', context)
+
+@login_required
+def notification_config_edit(request, config_id):
+    """Edit an existing notification configuration."""
+    config = get_object_or_404(AlertNotificationConfig, id=config_id)
+    
+    if request.method == 'POST':
+        config.name = request.POST.get('name')
+        config.notification_type = request.POST.get('notification_type')
+        config.min_severity = request.POST.get('min_severity')
+        config.recipients = request.POST.get('recipients')
+        config.is_active = request.POST.get('is_active') == 'on'
+        
+        # Update configuration based on notification type
+        configuration = {}
+        if config.notification_type == 'email':
+            # Email specific config
+            configuration['smtp_port'] = request.POST.get('smtp_port')
+            configuration['use_tls'] = request.POST.get('use_tls') == 'on'
+        elif config.notification_type == 'slack':
+            configuration['webhook_url'] = request.POST.get('webhook_url')
+        elif config.notification_type == 'webhook':
+            configuration['webhook_url'] = request.POST.get('webhook_url')
+            configuration['headers'] = request.POST.get('headers', '{}')
+        elif config.notification_type == 'sms':
+            configuration['provider'] = request.POST.get('provider')
+            configuration['api_key'] = request.POST.get('api_key')
+        
+        config.configuration = configuration
+        config.save()
+        
+        messages.success(request, 'Notification configuration updated successfully.')
+        return redirect('alerts:notification_config_list')
+    
+    context = {
+        'config': config,
+        'notification_types': AlertNotificationConfig.NOTIFICATION_TYPES,
+        'severity_levels': Alert.SEVERITY_LEVELS
+    }
+    
+    return render(request, 'alerts/notification_config_form.html', context)
+
+@login_required
+def notification_config_delete(request, config_id):
+    """Delete a notification configuration."""
+    config = get_object_or_404(AlertNotificationConfig, id=config_id)
+    
+    if request.method == 'POST':
+        config.delete()
+        messages.success(request, 'Notification configuration deleted successfully.')
+        return redirect('alerts:notification_config_list')
+    
+    return render(request, 'alerts/notification_config_confirm_delete.html', {'config': config})
+
+@login_required
+def notification_config_test(request, config_id):
+    """Test a notification configuration by sending a test alert."""
+    config = get_object_or_404(AlertNotificationConfig, id=config_id)
+    
+    if request.method == 'POST' or request.method == 'GET':
+        try:
+            # Create a test alert content
+            test_message = {
+                'subject': 'Test Alert from ARPF-TI',
+                'body': f'This is a test alert sent from ARPF-TI at {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}',
+                'severity': config.min_severity,
+                'source': 'Manual test',
+                'timestamp': timezone.now().isoformat()
+            }
+            
+            # Use the alert system to send the test notification
+            success = alert_system.send_notification(config, test_message)
+            
+            if success:
+                messages.success(request, f'Test notification sent successfully using {config.name}.')
+            else:
+                messages.error(request, f'Failed to send test notification using {config.name}.')
+        
+        except Exception as e:
+            messages.error(request, f'Error sending test notification: {str(e)}')
+    
+    return redirect('alerts:notification_config_list')
+
+@login_required
+def generate_alert_suggestions(request):
+    """Generate alert suggestions using Gemini AI for all unacknowledged standard alerts."""
+    # Get counts for alerts that can be analyzed
+    standard_alerts = Alert.objects.filter(
+        is_acknowledged=False, 
+        alert_status='standard',
+        gemini_suggestion__isnull=True
+    )
+    
+    pending_count = standard_alerts.count()
+    
+    if request.method == 'POST':
+        # Get all unacknowledged standard alerts without suggestions
+        suggestion_count = 0
+        errors = 0
+        
+        for alert in standard_alerts:
+            try:
+                # Get suggestion from Gemini
+                suggestion = gemini_integration.analyze_alert(alert)
+                
+                if suggestion:
+                    # If Gemini suggests sending the alert, mark it as suggested
+                    if suggestion.should_notify:
+                        alert.alert_status = 'suggested'
+                        suggestion_count += 1
+                    
+                    # The suggestion is already saved by the analyze_alert method
+                else:
+                    errors += 1
+            except Exception as e:
+                errors += 1
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error generating suggestion for alert {alert.id}: {str(e)}")
+        
+        if suggestion_count > 0:
+            messages.success(request, f'Generated {suggestion_count} new alert suggestions.')
+        
+        if errors > 0:
+            messages.warning(request, f'Failed to generate suggestions for {errors} alerts. Check the logs for details.')
+            
+        return redirect('alerts:alert_list')
+    
+    # Get recent suggestions
+    recent_suggestions = Alert.objects.filter(
+        alert_status='suggested',
+        gemini_suggestion__isnull=False
+    ).order_by('-timestamp')[:5]
+    
+    context = {
+        'pending_count': pending_count,
+        'recent_suggestions': recent_suggestions
+    }
+    
+    return render(request, 'alerts/generate_suggestions.html', context)

@@ -45,7 +45,7 @@ def generate_insights(days=7):
     Returns:
         dict: Insights and recommendations
     """
-    return arpf_defense.analyze_traffic_patterns(time_period_days=days)
+    return arpf_defense.analyze_traffic_patterns(days=days)
 
 def get_model_info():
     """

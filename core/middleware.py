@@ -531,27 +531,33 @@ class RequestLoggerMiddleware(MiddlewareMixin):
                 # Determine alert severity based on rule action
                 severity = 'high' if rule.action == 'block' else 'medium'
                 
-                # Create alert
+                # Create alert with proper parameter names
+                alert_title = f"{rule.action.title()} - {rule.name}"
+                alert_description = f"Rule triggered for IP {log_entry.source_ip} on path {log_entry.path}"
+                
+                # Debug logging to track alert creation
+                logger.info(f"Creating alert for blocked IP: {log_entry.source_ip}, Rule: {rule.name}")
+                
+                # Use the proper parameter names that match the create_alert function signature
                 create_alert(
-                    title=f"{rule.action.title()} - {rule.name}",
-                    message=f"Rule triggered for IP {log_entry.source_ip} on path {log_entry.path}",
-                    source="WAF",
+                    title=alert_title,
+                    description=alert_description,  # Use description, not message
                     severity=severity,
+                    source="waf",
                     source_id=str(rule.id) if hasattr(rule, 'id') and rule.id else "no_id",
-                    details={
-                        'rule_name': rule.name,
-                        'rule_type': rule.rule_type,
-                        'pattern': rule.pattern,
-                        'action': rule.action,
-                        'ip_address': log_entry.source_ip,
-                        'path': log_entry.path,
-                        'method': log_entry.method,
-                        'user_agent': log_entry.user_agent,
-                        'log_entry_id': log_entry.id
-                    }
+                    related_object=log_entry,
+                    source_ip=log_entry.source_ip
                 )
+                
+                # Set the is_blocked flag properly on the log entry to ensure it's recognized as blocked
+                if not log_entry.was_blocked and rule.action == 'block':
+                    log_entry.was_blocked = True
+                    log_entry.is_blocked = True
+                    log_entry.save(update_fields=['was_blocked', 'is_blocked'])
+                
+                logger.info(f"Successfully created alert for {rule.action} rule match: {rule.name}")
             except Exception as e:
-                logger.error(f"Error creating alert: {str(e)}")
+                logger.error(f"Error creating alert: {str(e)}", exc_info=True)
         else:
             logger.debug("Alerts functionality is disabled. No alert created.")
 

@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}Generate AI Suggestions | ARPF-TI{% endblock %}
+
+{% block content %}
+<nav class="flex mb-4" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}"
+                class="inline-flex items-center text-sm text-gray-500 hover:text-blue-600">
+                <i class="fas fa-home mr-2"></i>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2 text-sm"></i>
+                <a href="{% url 'alerts:alert_list' %}" class="text-sm text-gray-500 hover:text-blue-600">
+                    Security Alerts
+                </a>
+            </div>
+        </li>
+        <li aria-current="page">
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2 text-sm"></i>
+                <span class="text-sm text-gray-700 truncate max-w-xs">
+                    Generate AI Suggestions
+                </span>
+            </div>
+        </li>
+    </ol>
+</nav>
+
+<div class="mb-6">
+    <h1 class="text-xl font-bold text-gray-900">Generate AI Suggestions</h1>
+    <p class="mt-1 text-sm text-gray-500">
+        Use Gemini AI to analyze alerts and suggest which ones need attention
+    </p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="col-span-1 lg:col-span-2">
+        <!-- Main content -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-robot mr-2 text-purple-500"></i> AI Suggestion Generator
+                </h2>
+            </div>
+
+            <div class="mb-6">
+                <div class="bg-gray-50 border border-gray-200 rounded-md p-5">
+                    {% if pending_count > 0 %}
+                    <p class="text-gray-700 mb-4">
+                        There are <span class="font-semibold">{{ pending_count }}</span> unacknowledged standard alerts
+                        that haven't been analyzed by AI yet.
+                    </p>
+                    <form method="post" action="{% url 'alerts:generate_alert_suggestions' %}">
+                        {% csrf_token %}
+                        <div class="flex flex-col space-y-4">
+                            <button type="submit"
+                                class="px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 w-full md:w-auto">
+                                <i class="fas fa-robot mr-1"></i> Generate AI Suggestions for All Alerts
+                            </button>
+                            <p class="text-xs text-gray-500">
+                                This process may take some time depending on the number of alerts.
+                            </p>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
+                        <p class="text-gray-700">All unacknowledged alerts have been analyzed.</p>
+                        <p class="text-sm text-gray-500 mt-2">No new suggestions to generate at this time.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-md font-semibold text-gray-900 mb-4">How AI Suggestions Work</h3>
+                <div class="bg-blue-50 border border-blue-100 rounded-md p-4 text-sm text-blue-800">
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>ARPF-TI uses Gemini AI to analyze security alerts and determine their importance</li>
+                        <li>The AI evaluates the alert's context, severity, source, and other factors</li>
+                        <li>Alerts that require attention will be marked as "Suggested" with an AI icon</li>
+                        <li>You can review each suggestion and decide to confirm or ignore it</li>
+                        <li>Confirmed alerts will be sent through your configured notification channels</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-span-1">
+        <!-- Sidebar content -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Suggestions</h2>
+
+            {% if recent_suggestions %}
+            <div class="space-y-4">
+                {% for alert in recent_suggestions %}
+                <div class="border-b border-gray-200 pb-3 mb-3 last:border-b-0 last:pb-0 last:mb-0">
+                    <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}"
+                        class="text-sm font-medium text-blue-600 hover:text-blue-900">
+                        {{ alert.title }}
+                    </a>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-xs text-gray-500">
+                            {{ alert.timestamp|date:"M d, Y H:i" }}
+                        </span>
+                        {% if alert.severity == 'critical' %}
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800">Critical</span>
+                        {% elif alert.severity == 'high' %}
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-800">High</span>
+                        {% elif alert.severity == 'medium' %}
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800">Medium</span>
+                        {% elif alert.severity == 'low' %}
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">Low</span>
+                        {% else %}
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">Info</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-4 text-center">
+                <a href="{% url 'alerts:alert_list' %}?tab=suggested" class="text-sm text-blue-600 hover:text-blue-900">
+                    View All Suggested Alerts <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            {% else %}
+            <div class="text-center text-gray-500 my-4">
+                <p>No AI suggestions generated yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Links</h2>
+            <ul class="space-y-3">
+                <li>
+                    <a href="{% url 'alerts:alert_list' %}?tab=suggested"
+                        class="flex items-center text-sm text-blue-600 hover:text-blue-900">
+                        <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>
+                        AI Suggested Alerts
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'alerts:alert_list' %}?tab=standard"
+                        class="flex items-center text-sm text-blue-600 hover:text-blue-900">
+                        <i class="fas fa-exclamation-circle mr-2 text-gray-500"></i>
+                        Standard Alerts
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'alerts:notification_config_list' %}"
+                        class="flex items-center text-sm text-blue-600 hover:text-blue-900">
+                        <i class="fas fa-bell mr-2 text-blue-500"></i>
+                        Notification Settings
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -178,7 +178,7 @@ def entries_list(request):
     entry_type_filter = request.GET.get('entry_type', '')
     category_filter = request.GET.get('category', '')
     source_filter = request.GET.get('source', '')
-    min_confidence = request.GET.get('min_confidence', 0)
+    min_confidence = request.GET.get('min_confidence', '')
     
     # Start with all non-test entries
     entries = ThreatIntelEntry.objects.filter(is_test_data=False)
@@ -190,7 +190,13 @@ def entries_list(request):
     if source_filter:
         entries = entries.filter(source_id=source_filter)
     if min_confidence:
-        entries = entries.filter(confidence_score__gte=min_confidence)
+        try:
+            # Convert string value to float for filtering
+            min_confidence_float = float(min_confidence)
+            entries = entries.filter(confidence_score__gte=min_confidence_float)
+        except ValueError:
+            # If conversion fails, ignore this filter
+            pass
     
     # Default sorting by newest first
     entries = entries.order_by('-last_seen')
@@ -523,4 +529,44 @@ def analyze_traffic(request):
             f"Error running ARPF Defense traffic analysis: {str(e)}"
         )
     
+    return redirect('threat_intelligence:index')
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def detect_traffic_patterns(request):
+    """
+    Detect traffic patterns like heavy traffic and repetitive blocks and create alerts.
+    This view triggers the traffic pattern detection process and reports results.
+    """
+    try:
+        # Run the traffic pattern detection process
+        from .traffic_analyzer import detect_traffic_patterns_and_create_alerts
+        results = detect_traffic_patterns_and_create_alerts()
+        
+        if 'error' in results:
+            messages.error(
+                request,
+                f"Error detecting traffic patterns: {results['error']}"
+            )
+        else:
+            messages.success(
+                request,
+                f"Traffic pattern detection completed successfully! " 
+                f"Detected {results['heavy_traffic_patterns_detected']} heavy traffic patterns and "
+                f"{results['repetitive_blocks_detected']} repetitive block patterns. "
+                f"Created {results['alerts_created']} alerts, with "
+                f"{results['alerts_suggested_for_notification']} suggested for notification by AI."
+            )
+            
+        # Redirect to alerts page if we created any alerts
+        if results.get('alerts_created', 0) > 0:
+            return redirect('alerts:list')
+            
+    except Exception as e:
+        messages.error(
+            request, 
+            f"Error in traffic pattern detection: {str(e)}"
+        )
+    
+    # If no alerts created or an error occurred, redirect back to the dashboard
     return redirect('threat_intelligence:index')

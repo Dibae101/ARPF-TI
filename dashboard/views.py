@@ -5,9 +5,15 @@ from django.db.models import Count, Avg, Sum
 from django.utils import timezone as django_timezone  # Renamed to avoid shadowing
 from django.conf import settings as django_settings  # Added for accessing DEBUG setting
 from datetime import timedelta
+from math import sin  # Import sin function for sample data generation
+import random
+import logging
+
 from .models import DashboardMetric, DashboardSettings
 from core.models import RequestLog, Rule
 from alerts.models import Alert
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def dashboard(request):
@@ -69,7 +75,6 @@ def dashboard(request):
     
     # If there are no active rules, create some sample data for display
     if not active_rules_list and django_settings.DEBUG:
-        import random
         sample_rules = []
         
         rule_names = [
@@ -101,7 +106,6 @@ def dashboard(request):
     # If there are no logs, create some sample data for the display
     if not recent_logs.exists() and django_settings.DEBUG:
         # Create some example logs for demo purposes only
-        import random
         import string
         
         # Sample methods, paths and IPs
@@ -183,13 +187,11 @@ def dashboard(request):
     
     # Recent alerts
     try:
-        recent_alerts = Alert.objects.order_by('-created_at')[:5]
-        recent_alerts_count = Alert.objects.filter(created_at__gte=start_time).count()
+        recent_alerts = Alert.objects.order_by('-timestamp')[:5]
+        recent_alerts_count = Alert.objects.filter(timestamp__gte=start_time).count()
         
         # Add sample alert data if none exists
         if not recent_alerts and django_settings.DEBUG:
-            import random
-            
             sample_alert_titles = [
                 "Unusual traffic spike detected",
                 "Potential SQL injection attempt",
@@ -207,15 +209,16 @@ def dashboard(request):
                     title=sample_alert_titles[i],
                     description=f"Sample alert for {sample_alert_titles[i].lower()}",
                     severity=sample_severities[random.randint(0, len(sample_severities)-1)],
-                    created_at=django_timezone.now() - timedelta(hours=random.randint(1, 24)),
+                    timestamp=django_timezone.now() - timedelta(hours=random.randint(1, 24)),
                     resolved=random.choice([True, False, False])
                 )
                 sample_alerts.append(alert)
             
             recent_alerts = sample_alerts
             recent_alerts_count = len(sample_alerts)
-    except:
+    except Exception as e:
         # Handle case where Alert model might not exist or be accessible
+        logger.error(f"Error fetching recent alerts: {str(e)}")
         recent_alerts = []
         recent_alerts_count = 0
     
@@ -267,6 +270,13 @@ def dashboard(request):
         'blocked_requests': json.dumps(blocked_requests_data)
     }
     
+    # Add fallback data for when JavaScript can't parse the JSON
+    fallback_chart_data = {
+        'labels': labels,
+        'all_requests': all_requests_data,
+        'blocked_requests': blocked_requests_data
+    }
+    
     context = {
         'settings': settings,
         'time_range': time_range,
@@ -285,6 +295,7 @@ def dashboard(request):
         'recent_alert_list': recent_alerts,
         'rule_trigger_count': sum(rule['count'] for rule in top_rules) if top_rules else 0,
         'chart_data': chart_data,
+        'fallback_chart_data': fallback_chart_data,
     }
     
     return render(request, 'dashboard/index.html', context)
@@ -449,9 +460,38 @@ def traffic_data_api(request):
         all_requests_data.append(total_in_slot)
         blocked_requests_data.append(blocked_in_slot)
     
+    # If we have no data, generate sample data based on the time period
+    if sum(all_requests_data) == 0 and django_settings.DEBUG:
+        # Generate sample data appropriate for each time range
+        if time_range == 'hour':
+            base_requests = 5
+            peak_factor = 3
+        elif time_range == 'day':
+            base_requests = 20
+            peak_factor = 5
+        elif time_range == 'week':
+            base_requests = 50
+            peak_factor = 3
+        else:  # month
+            base_requests = 100
+            peak_factor = 2
+        
+        # Generate more realistic sample data with patterns
+        for i in range(len(labels)):
+            # Create a pattern with higher values in the middle of the period
+            pattern_factor = 1 + abs(sin(i / len(labels) * 3.14)) * peak_factor
+            
+            # Add some randomness
+            requests = int(base_requests * pattern_factor * (0.7 + random.random() * 0.6))
+            blocked = int(requests * random.uniform(0.1, 0.3))
+            
+            all_requests_data[i] = requests
+            blocked_requests_data[i] = blocked
+    
     # Return data as JSON
     return JsonResponse({
         'labels': labels,
         'all_requests': all_requests_data,
-        'blocked_requests': blocked_requests_data
+        'blocked_requests': blocked_requests_data,
+        'time_range': time_range
     })

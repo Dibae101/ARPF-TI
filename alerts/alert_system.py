@@ -39,8 +39,9 @@ class AlertSystem:
             if related_logs:
                 alert.related_logs.set(related_logs)
             
-            # Don't automatically send notifications, wait for confirmation
-            # by removing this line: cls.send_notifications(alert)
+            # Automatically send notifications for high and critical severity alerts
+            if severity in ['high', 'critical']:
+                cls.send_notifications(alert)
             
             return alert
         
@@ -85,35 +86,30 @@ class AlertSystem:
     @classmethod
     def send_notification(cls, config, alert_or_message):
         """
-        Send a notification using a specific configuration.
+        Send a notification through a specific configured channel.
         
         Args:
             config: The AlertNotificationConfig to use
-            alert_or_message: Either an Alert object or a dictionary with alert data
-            
+            alert_or_message: Either an Alert object or a message dict
+        
         Returns:
-            bool: True if notification was sent successfully, False otherwise
+            Boolean indicating success
         """
         try:
-            # Determine if we're dealing with an Alert object or a dictionary
-            is_alert_obj = isinstance(alert_or_message, Alert)
-            
             notification_type = config.notification_type
             
+            # Determine which notification method to use
             if notification_type == 'email':
-                return cls._send_email_notification(alert_or_message, config, is_alert_obj)
-            
+                return cls._send_email_notification(alert_or_message, config, isinstance(alert_or_message, Alert))
             elif notification_type == 'slack':
-                return cls._send_slack_notification(alert_or_message, config, is_alert_obj)
-            
+                return cls._send_slack_notification(alert_or_message, config, isinstance(alert_or_message, Alert))
             elif notification_type == 'webhook':
-                return cls._send_webhook_notification(alert_or_message, config, is_alert_obj)
-            
+                return cls._send_webhook_notification(alert_or_message, config, isinstance(alert_or_message, Alert))
             elif notification_type == 'sms':
-                return cls._send_sms_notification(alert_or_message, config, is_alert_obj)
-            
-            logger.warning(f"Unknown notification type: {notification_type}")
-            return False
+                return cls._send_sms_notification(alert_or_message, config, isinstance(alert_or_message, Alert))
+            else:
+                logger.warning(f"Unknown notification type: {notification_type}")
+                return False
             
         except Exception as e:
             logger.error(f"Error sending notification: {str(e)}")
@@ -365,6 +361,147 @@ class AlertSystem:
         # You would implement this based on your chosen SMS provider
         logger.info("SMS notification not implemented yet")
         return False
+
+    @classmethod
+    def create_traffic_pattern_alerts(cls, traffic_patterns):
+        """
+        Create alerts from detected traffic patterns like heavy traffic or repetitive blocks.
+        
+        Args:
+            traffic_patterns: List of traffic patterns detected by the traffic analyzer
+            
+        Returns:
+            list: Created Alert objects
+        """
+        created_alerts = []
+        
+        for pattern in traffic_patterns:
+            pattern_type = pattern.get('pattern_type')
+            
+            # Skip patterns with low confidence
+            if pattern.get('confidence', 0) < 70:
+                continue
+                
+            try:
+                # Create alert based on pattern type
+                if pattern_type == 'heavy_traffic':
+                    # Process heavy traffic pattern
+                    source_ip = pattern.get('source_ip')
+                    count = pattern.get('count', 0)
+                    country = pattern.get('country', 'Unknown')
+                    region = pattern.get('region', 'Unknown')
+                    window_start = pattern.get('window_start')
+                    window_end = pattern.get('window_end')
+                    
+                    # Determine severity based on request count
+                    severity = 'low'
+                    if count > 500:
+                        severity = 'critical'
+                    elif count > 300:
+                        severity = 'high'
+                    elif count > 200:
+                        severity = 'medium'
+                    
+                    # Create alert
+                    title = f"Heavy traffic detected from {source_ip} ({country})"
+                    description = (
+                        f"Detected {count} requests from IP {source_ip} ({country}/{region}) "
+                        f"between {window_start.strftime('%H:%M:%S')} and {window_end.strftime('%H:%M:%S')}. "
+                        f"This rate of requests may indicate a DDoS attack, web scraping, or bot activity."
+                    )
+                    
+                    alert = cls.create_alert(
+                        alert_type='network_anomaly',
+                        severity=severity,
+                        title=title,
+                        description=description,
+                        source_ip=source_ip
+                    )
+                    
+                    if alert:
+                        created_alerts.append(alert)
+                        logger.info(f"Created heavy traffic alert for IP {source_ip}")
+                    
+                elif pattern_type == 'repetitive_ip_block':
+                    # Process repetitive IP block pattern
+                    source_ip = pattern.get('source_ip')
+                    count = pattern.get('count', 0)
+                    country = pattern.get('country', 'Unknown')
+                    region = pattern.get('region', 'Unknown')
+                    window_start = pattern.get('window_start')
+                    window_end = pattern.get('window_end')
+                    
+                    # Determine severity based on block count
+                    severity = 'low'
+                    if count > 20:
+                        severity = 'critical'
+                    elif count > 15:
+                        severity = 'high'
+                    elif count > 10:
+                        severity = 'medium'
+                    
+                    # Create alert
+                    title = f"Repetitive firewall blocks for IP {source_ip} ({country})"
+                    description = (
+                        f"Detected {count} firewall blocks for IP {source_ip} ({country}/{region}) "
+                        f"between {window_start.strftime('%H:%M:%S')} and {window_end.strftime('%H:%M:%S')}. "
+                        f"This pattern may indicate a persistent attack attempt or scanning activity."
+                    )
+                    
+                    alert = cls.create_alert(
+                        alert_type='suspicious_activity',
+                        severity=severity,
+                        title=title,
+                        description=description,
+                        source_ip=source_ip
+                    )
+                    
+                    if alert:
+                        created_alerts.append(alert)
+                        logger.info(f"Created repetitive block alert for IP {source_ip}")
+                    
+                elif pattern_type == 'repetitive_region_block':
+                    # Process repetitive region block pattern
+                    region = pattern.get('region')
+                    country = pattern.get('country', 'Unknown')
+                    region_name = pattern.get('region_name', 'Unknown')
+                    count = pattern.get('count', 0)
+                    window_start = pattern.get('window_start')
+                    window_end = pattern.get('window_end')
+                    
+                    # Determine severity based on block count
+                    severity = 'low'
+                    if count > 30:
+                        severity = 'critical'
+                    elif count > 20:
+                        severity = 'high'
+                    elif count > 15:
+                        severity = 'medium'
+                    
+                    # Create alert
+                    title = f"Multiple blocks from region {country}/{region_name}"
+                    description = (
+                        f"Detected {count} firewall blocks from region {country}/{region_name} "
+                        f"between {window_start.strftime('%H:%M:%S')} and {window_end.strftime('%H:%M:%S')}. "
+                        f"This pattern may indicate a coordinated attack from this geographic region."
+                    )
+                    
+                    alert = cls.create_alert(
+                        alert_type='suspicious_activity',
+                        severity=severity,
+                        title=title,
+                        description=description,
+                        source_ip=None  # No specific IP for region alerts
+                    )
+                    
+                    if alert:
+                        created_alerts.append(alert)
+                        logger.info(f"Created repetitive regional block alert for {region}")
+            
+            except Exception as e:
+                logger.error(f"Error creating alert for pattern {pattern_type}: {str(e)}")
+        
+        return created_alerts
 
 # Create a singleton instance
 alert_system = AlertSystem()
