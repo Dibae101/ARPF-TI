@@ -2,6 +2,28 @@
 
 ARPF-TI is a robust system designed to process web requests with integrated threat intelligence capabilities, focusing on security and analysis. The platform combines traditional rule-based filtering with advanced AI-powered threat detection to provide comprehensive protection and insights.
 
+## Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/ARPF-TI.git
+cd ARPF-TI
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run database migrations
+python manage.py migrate
+
+# Create admin user
+python manage.py createsuperuser
+
+# Start the server
+python manage.py runserver 0.0.0.0:8000
+```
+
+Visit [http://localhost:8000](http://localhost:8000) or [http://your-server-ip:8000](http://your-server-ip:8000) to access the dashboard.
+
 ## Features
 
 ### Request Processing
@@ -24,7 +46,8 @@ ARPF-TI is a robust system designed to process web requests with integrated thre
 
 ### AI-Powered Detection
 
-- **TinyLlama Integration**: Leverage the TinyLlama 1.1B model for advanced threat detection
+- **Gemini AI Integration**: Leverage AI for advanced threat detection and pattern analysis
+- **TinyLlama Integration**: Optional use of the TinyLlama 1.1B model for local inference
 - **Request Analysis**: Analyze request patterns to identify suspicious behavior
 - **Anomaly Detection**: Identify unusual patterns that may indicate zero-day threats
 - **Custom Model Training**: Train models based on your specific traffic patterns
@@ -51,28 +74,30 @@ ARPF-TI is a robust system designed to process web requests with integrated thre
 - **Scheduled Digests**: Configure daily or weekly alert digests
 - **Alert Management**: Acknowledge, assign, and resolve alerts through the interface
 
-## Setup and Installation
+## Detailed Setup and Installation
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.8+ (3.12 recommended)
 - Django 3.2+
 - Required packages (see requirements.txt)
 - 4GB+ RAM for AI model inference
 - 2GB+ disk space for models and databases
 
-### Installation
+### Installation Options
+
+#### Standard Installation
 
 1. Clone the repository:
    ```
-   git clone <repository-url>
+   git clone https://github.com/yourusername/ARPF-TI.git
    cd ARPF-TI
    ```
 
 2. Create and activate a virtual environment:
    ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m venv env
+   source env/bin/activate  # On Windows: env\Scripts\activate
    ```
 
 3. Install dependencies:
@@ -92,16 +117,90 @@ ARPF-TI is a robust system designed to process web requests with integrated thre
 
 6. Run the development server:
    ```
-   python manage.py runserver
+   python manage.py runserver 0.0.0.0:8000
    ```
+
+7. Access the application:
+   - Dashboard: http://localhost:8000/
+   - Admin interface: http://localhost:8000/admin/
+
+#### Docker Installation
+
+For production environments, Docker is recommended:
+
+1. Make sure Docker and Docker Compose are installed on your system
+2. Build and start the containers:
+   ```
+   docker-compose up -d
+   ```
+
+3. Create a superuser in the Docker container:
+   ```
+   docker-compose exec web python manage.py createsuperuser
+   ```
+
+4. Access the application:
+   - Dashboard: http://localhost:8000/
+   - Admin interface: http://localhost:8000/admin/
+
+See [docker-readme.md](docker-readme.md) for detailed Docker configuration options.
+
+### Production Deployment
+
+For production environments, additional configurations are recommended:
+
+1. Use a proper web server like Nginx or Apache as a reverse proxy
+2. Configure HTTPS with SSL certificates
+3. Use a production-grade database (PostgreSQL recommended)
+4. Set up proper logging
+5. Configure email for alerts
+
+Example Nginx configuration:
+```nginx
+server {
+    listen 80;
+    server_name yourserver.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name yourserver.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static/ {
+        alias /path/to/ARPF-TI/staticfiles/;
+    }
+}
+```
 
 ### AI Model Setup
 
-ARPF-TI uses TinyLlama for advanced threat detection. Follow these steps to set up the model:
+ARPF-TI uses AI for advanced threat detection. You can use either the online Gemini AI integration or the local TinyLlama model:
 
-#### Automatic Model Download
+#### 1. Gemini AI Integration (Recommended)
 
-The simplest way to download and set up the TinyLlama model:
+The easiest option is to use the integrated Gemini AI service:
+
+1. Go to Settings > Threat Intelligence > AI Settings
+2. Enable "Use Gemini AI for threat analysis"
+3. The system will use the pre-configured Gemini AI service without any additional setup
+
+#### 2. TinyLlama Setup (Optional for local inference)
+
+For local AI inference or offline environments:
+
+##### Automatic Model Download
 
 1. Run the provided download script:
    ```
@@ -122,7 +221,11 @@ The simplest way to download and set up the TinyLlama model:
    - Creates a pickle file for faster loading
    - May take 5-10 minutes depending on your hardware
 
-#### Manual Model Setup
+3. Verify model setup in admin panel:
+   - Go to Admin > Threat Intelligence > AI Models
+   - Confirm that TinyLlama model status shows "Active"
+
+##### Manual Model Setup
 
 If you prefer to set up the model manually:
 
@@ -160,7 +263,7 @@ If you prefer to set up the model manually:
    print(f"Model saved to {pickle_path}")
    ```
 
-#### Using Alternative Models
+#### 3. Using Alternative Models
 
 You can also use other compatible models:
 
@@ -174,6 +277,50 @@ You can also use other compatible models:
 4. Click "Save" to register the model
 5. To activate the model, select it and click "Set as Active"
 
+## Setting Up Threat Intelligence Sources
+
+ARPF-TI comes with several pre-configured threat intelligence sources, but you can add your own custom sources:
+
+### 1. Using Built-in Sources
+
+Run the setup script to configure default sources:
+```
+python create_test_sources.py
+```
+
+This will set up:
+- AlienVault OTX
+- MISP Community Feed
+- Abuse.ch URLhaus
+- PhishTank
+- Emerging Threats Community
+
+### 2. Adding Custom Sources
+
+To add your own threat intelligence sources:
+
+1. Go to Threat Intelligence > Sources > Add New Source
+2. Fill in the required information:
+   - Name: A descriptive name for the source
+   - URL: The API endpoint or feed URL
+   - Source Type: Select from dropdown (MISP, TAXII, API, etc.)
+   - API Key: If required for authentication
+   - Update Frequency: How often to fetch new data
+   - Confidence Score: Default confidence for entries from this source
+3. Click "Test Connection" to verify the source is accessible
+4. Click "Save" to add the source
+5. Click "Fetch Now" to immediately download threat data
+
+### 3. Manual Entry
+
+You can also manually add threat intelligence entries:
+
+1. Go to Threat Intelligence > Entries > Add New Entry
+2. Select the entry type (IP, Domain, URL, Hash, etc.)
+3. Enter the value and additional metadata
+4. Set confidence score and expiry date
+5. Click "Save" to add the entry to the database
+
 ## Detailed Feature Guide
 
 ### Dashboard Interface
@@ -185,6 +332,7 @@ The dashboard is your central control point for monitoring system activity:
 - **Blocked Requests**: Displays number of blocked requests with block rate percentage
 - **Active Rules**: Shows number of currently active rules with trigger count
 - **Recent Alerts**: Displays count of recent alerts with link to details
+- **Gemini AI Status**: Shows whether AI analysis is active and learning from patterns
 
 **Traffic Overview**:
 - Interactive line chart showing request volume over time
@@ -241,6 +389,34 @@ The rule management interface allows you to create and manage filtering rules:
 - Testing tool to validate rule against sample requests
 - Enable/disable toggle for quick activation/deactivation
 
+### Example Rule Creation
+
+**Creating a SQL Injection Protection Rule**:
+
+1. Go to Rules > Add New Rule
+2. Set basic information:
+   - Name: "SQL Injection Protection"
+   - Description: "Block common SQL injection attempts in query parameters"
+   - Priority: 85 (high)
+3. Add conditions:
+   - Parameter Type: Query Parameters
+   - Matching Method: Regex Match
+   - Pattern: `'((\%27)|(\'))((\%6F)|o|(\%4F))((\%72)|r|(\%52))`
+   - Click "Add Condition"
+   - Join Type: OR
+   - Parameter Type: Query Parameters
+   - Matching Method: Regex Match
+   - Pattern: `((\%27)|(\'))union((\%20)|(\s))((\%73)|s|(\%53))((\%65)|e|(\%45))((\%6C)|l|(\%4C))((\%65)|e|(\%45))((\%63)|c|(\%43))((\%74)|t|(\%54))`
+4. Set Action: Block Request
+5. Advanced Options:
+   - Alert: Enabled
+   - Alert Severity: High
+   - Log Detail Level: Full
+6. Test the rule:
+   - Enter sample URL: `/search?q=test' OR 1=1--`
+   - Click "Test Rule" - should show "Rule would block this request"
+7. Save the rule by clicking "Create Rule"
+
 ### Threat Intelligence Management
 
 Manage and integrate with threat intelligence sources:
@@ -273,6 +449,28 @@ Manage and integrate with threat intelligence sources:
 - Performance metrics (accuracy, resource usage)
 - Interface for uploading new models
 - Configuration panel for model parameters
+
+### Traffic Analysis
+
+The Traffic Analyzer is a powerful feature that helps identify potential threats:
+
+1. Access via Threat Intelligence > Traffic Analysis
+2. Configure analysis parameters:
+   - Time period to analyze (default: last 7 days)
+   - Minimum confidence threshold (default: 70%)
+   - Analysis depth (Quick, Standard, Deep)
+3. Click "Start Analysis" to begin processing
+4. View results in the Analysis Report:
+   - Total logs analyzed
+   - Potential threats identified
+   - New threat intelligence entries created
+   - Suggested firewall rules
+   - Breakdown by threat categories
+5. Review and apply suggested rules
+6. Schedule automated analysis:
+   - Daily, Weekly, or Monthly
+   - Configurable parameters for each schedule
+   - Option to auto-approve high-confidence rules
 
 ### Log Analysis
 
@@ -316,56 +514,124 @@ Configure and manage security alerts:
 - Comment thread for team collaboration
 - Status management (new, acknowledged, resolved)
 
-**Notification Configuration**:
-- Configure alert delivery channels
-- Set up email recipients
-- Configure webhook endpoints
-- Slack/Teams integration settings
-- Schedule for alert digests
-- Filter which alert types go to which channels
-- Test notification button to verify setup
+**Slack Integration**:
+1. Go to Alerts > Notification Settings > Slack
+2. Click "Configure Slack Integration"
+3. Enter your Slack Webhook URL
+4. Configure which alert types to send to Slack
+5. Set up formatting options
+6. Click "Test" to verify the connection
+7. Save the configuration
 
 ## API Reference
 
 ARPF-TI provides a comprehensive API for integration with other systems:
 
 **Authentication Endpoints**:
-- `/api/auth/token/` - Obtain authentication token
-- `/api/auth/refresh/` - Refresh authentication token
+- `POST /api/auth/token/`: Obtain authentication token
+  ```json
+  {
+    "username": "your_username",
+    "password": "your_password"
+  }
+  ```
+- `POST /api/auth/refresh/`: Refresh authentication token
+  ```json
+  {
+    "refresh": "your_refresh_token"
+  }
+  ```
 
 **Logs API**:
-- `GET /api/logs/` - Retrieve logs with filtering
-- `GET /api/logs/{id}/` - Get specific log details
+- `GET /api/logs/`: Retrieve logs with filtering
+  - Query params: `start_date`, `end_date`, `source_ip`, `status`, etc.
+- `GET /api/logs/{id}/`: Get specific log details
 
 **Rules API**:
-- `GET /api/rules/` - List all rules
-- `POST /api/rules/` - Create new rule
-- `GET /api/rules/{id}/` - Get rule details
-- `PUT /api/rules/{id}/` - Update rule
-- `DELETE /api/rules/{id}/` - Delete rule
-- `POST /api/rules/{id}/toggle/` - Enable/disable rule
+- `GET /api/rules/`: List all rules
+- `POST /api/rules/`: Create new rule
+  ```json
+  {
+    "name": "Example Rule",
+    "description": "Block suspicious requests",
+    "is_active": true,
+    "priority": 75,
+    "conditions": [
+      {
+        "parameter_type": "query",
+        "match_type": "contains",
+        "pattern": "malicious"
+      }
+    ],
+    "action": "block"
+  }
+  ```
+- `GET /api/rules/{id}/`: Get rule details
+- `PUT /api/rules/{id}/`: Update rule
+- `DELETE /api/rules/{id}/`: Delete rule
+- `POST /api/rules/{id}/toggle/`: Enable/disable rule
 
 **Threat Intelligence API**:
-- `GET /api/threat-intel/sources/` - List sources
-- `GET /api/threat-intel/entries/` - List entries
-- `POST /api/threat-intel/sources/{id}/refresh/` - Refresh source
+- `GET /api/threat-intel/sources/`: List sources
+- `GET /api/threat-intel/entries/`: List entries
+  - Query params: `entry_type`, `value`, `confidence_min`, etc.
+- `POST /api/threat-intel/sources/{id}/refresh/`: Refresh source
 
 **Alert API**:
-- `GET /api/alerts/` - List alerts
-- `GET /api/alerts/{id}/` - Get alert details
-- `PUT /api/alerts/{id}/status/` - Update alert status
-- `GET /api/alerts/stats/` - Get alert statistics
+- `GET /api/alerts/`: List alerts
+- `GET /api/alerts/{id}/`: Get alert details
+- `PUT /api/alerts/{id}/status/`: Update alert status
+- `GET /api/alerts/stats/`: Get alert statistics
+
+**Complete API documentation is available at `/api/docs/` when the server is running.**
 
 ## Project Structure
 
 - `alerts/`: Alert system management and notification logic
+  - `alert_system.py`: Core alert generation and routing
+  - `setup_slack.py`: Slack integration configuration
 - `arpf_ti/`: Main Django project settings and configuration
 - `core/`: Core request processing functionality and rule engine
+  - `middleware.py`: Request interception and processing
+  - `models.py`: Rule definitions and log storage
 - `dashboard/`: System analytics, visualization, and monitoring
+  - `views.py`: Dashboard data processing
+  - `templatetags/`: Custom template filters and tags
 - `threat_intelligence/`: Threat intelligence sources and AI model integration
   - `ai/`: AI model implementation and inference logic
   - `integrations/`: Connectors for external threat intelligence sources
   - `model_files/`: Storage for AI model files and data
+  - `traffic_analyzer.py`: Traffic pattern analysis
+- `templates/`: HTML templates for the web interface
+- `static/`: CSS, JavaScript, and image assets
+- `tests/`: Automated tests and attack simulations
+
+## Troubleshooting
+
+### Common Issues
+
+**Installation Problems**:
+- If you encounter issues with package installation, try: `pip install --upgrade pip` before installing requirements
+- For specific package errors, check the [requirements-dev.txt](requirements-dev.txt) for alternative versions
+
+**Database Errors**:
+- If database migration fails, try: `python manage.py migrate --fake-initial`
+- For database connection issues: Check database settings in `settings.py`
+
+**AI Model Issues**:
+- If TinyLlama fails to load: Verify model files exist in `threat_intelligence/model_files/tinyllama/`
+- For CUDA/GPU errors: Set environment variable `FORCE_CPU=1` to use CPU only
+
+**Web Server Issues**:
+- If the server won't start: Check port availability with `netstat -tulpn | grep 8000`
+- For 500 errors: Check logs in `logs/arpf_ti.log`
+
+### Getting Help
+
+If you encounter issues not covered here:
+1. Check the logs in `logs/arpf_ti.log`
+2. Visit our [GitHub Issues page](https://github.com/yourusername/ARPF-TI/issues)
+3. Join our community forum at [community.arpf-ti.org](https://community.arpf-ti.org)
 
 ## Contributing
 
@@ -374,3 +640,9 @@ Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contrib
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- TinyLlama model by [TinyLlama team](https://github.com/jzhang38/TinyLlama)
+- Django framework
+- All open-source libraries and threat intelligence feeds used in this project
