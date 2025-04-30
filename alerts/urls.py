@@ -15,4 +15,9 @@ urlpatterns = [
     path('configurations/<int:config_id>/', views.notification_config_edit, name='notification_config_edit'),
     path('configurations/<int:config_id>/delete/', views.notification_config_delete, name='notification_config_delete'),
     path('configurations/<int:config_id>/test/', views.notification_config_test, name='notification_config_test'),
+    # Gemini AI integration and alert confirmation
+    path('generate-suggestions/', views.generate_alert_suggestions, name='generate_alert_suggestions'),
+    path('<int:alert_id>/view-suggestion/', views.view_gemini_suggestion, name='view_gemini_suggestion'),
+    path('<int:alert_id>/confirm/', views.confirm_alert, name='confirm_alert'),
+    path('<int:alert_id>/ignore/', views.ignore_alert_suggestion, name='ignore_alert_suggestion'),
 ]

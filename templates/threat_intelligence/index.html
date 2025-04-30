@@ -32,7 +32,8 @@
         <p class="mt-1 text-sm text-gray-600">Manage and analyze threat intelligence data sources</p>
     </div>
     <div class="flex space-x-3">
-        <a href="{% url 'threat_intelligence:source_add' %}" class="btn-primary py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm flex items-center">
+        <a href="{% url 'threat_intelligence:source_add' %}"
+            class="btn-primary py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm flex items-center">
             <i class="fas fa-plus mr-2"></i> Add Source
         </a>
     </div>
@@ -131,8 +132,8 @@
                         Last run: {{ last_traffic_analysis|date:"M d, H:i" }}
                     </span>
                     {% endif %}
-                    <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=7" 
-                       class="px-4 py-2 bg-white text-blue-700 rounded-md hover:bg-blue-50 text-sm font-medium transition-colors duration-200 shadow-sm">
+                    <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=7"
+                        class="px-4 py-2 bg-white text-blue-700 rounded-md hover:bg-blue-50 text-sm font-medium transition-colors duration-200 shadow-sm">
                         Run Analysis
                     </a>
                 </div>
@@ -144,19 +145,23 @@
                 <ul class="space-y-2 text-sm text-gray-700">
                     <li class="flex items-start">
                         <i class="fas fa-history text-blue-600 mt-1 mr-2"></i>
-                        <span><strong>Log Processing:</strong> Analyzes historical request logs to identify patterns, anomalies, and potential threats.</span>
+                        <span><strong>Log Processing:</strong> Analyzes historical request logs to identify patterns,
+                            anomalies, and potential threats.</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-user-shield text-blue-600 mt-1 mr-2"></i>
-                        <span><strong>Blocked IPs:</strong> Identifies and tracks IPs that have triggered blocking rules.</span>
+                        <span><strong>Blocked IPs:</strong> Identifies and tracks IPs that have triggered blocking
+                            rules.</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-tachometer-alt text-blue-600 mt-1 mr-2"></i>
-                        <span><strong>Volume Analysis:</strong> Detects abnormal request volumes that may indicate scanning or abuse.</span>
+                        <span><strong>Volume Analysis:</strong> Detects abnormal request volumes that may indicate
+                            scanning or abuse.</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-filter text-blue-600 mt-1 mr-2"></i>
-                        <span><strong>Pattern Recognition:</strong> Identifies signs of common attacks like SQL injection, XSS, or path traversal.</span>
+                        <span><strong>Pattern Recognition:</strong> Identifies signs of common attacks like SQL
+                            injection, XSS, or path traversal.</span>
                     </li>
                 </ul>
             </div>
@@ -164,13 +169,13 @@
                 <div class="flex justify-between items-center">
                     <span class="text-xs text-gray-500">Traffic analysis generates actionable threat intelligence</span>
                     <div>
-                        <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=1" 
-                           class="text-xs inline-block px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded mr-2 transition-colors duration-200">
-                           Last 24 hours
+                        <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=1"
+                            class="text-xs inline-block px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded mr-2 transition-colors duration-200">
+                            Last 24 hours
                         </a>
-                        <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=30" 
-                           class="text-xs inline-block px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded transition-colors duration-200">
-                           Last 30 days
+                        <a href="{% url 'threat_intelligence:analyze_traffic' %}?days=30"
+                            class="text-xs inline-block px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded transition-colors duration-200">
+                            Last 30 days
                         </a>
                     </div>
                 </div>
@@ -221,7 +226,7 @@
             </div>
             <div class="pt-4 border-t border-gray-200">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs text-gray-500">Model last updated: {{ now|date:"F d, Y" }}</span>
+                    <span class="text-xs text-gray-500">Model last updated: {% now "F d, Y" %}</span>
                     <div class="pulse-animation bg-green-400 w-2 h-2 rounded-full"></div>
                 </div>
             </div>
@@ -237,7 +242,8 @@
             <div class="card-header flex justify-between items-center">
                 <span>Threat Intelligence Sources</span>
                 <a href="{% url 'threat_intelligence:sources_list' %}"
-                    class="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded transition-colors duration-200">View all</a>
+                    class="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded transition-colors duration-200">View
+                    all</a>
             </div>
             <div class="card-body p-0">
                 <div class="overflow-x-auto">
@@ -329,8 +335,9 @@
             </span>
             {% endif %}
         </div>
-        <a href="{% url 'threat_intelligence:entries_list' %}" 
-           class="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded transition-colors duration-200">View all</a>
+        <a href="{% url 'threat_intelligence:entries_list' %}"
+            class="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded transition-colors duration-200">View
+            all</a>
     </div>
     <div class="card-body p-0">
         <div class="overflow-x-auto">
@@ -370,14 +377,15 @@
                             {{ entry.get_entry_type_display }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <a href="{% url 'threat_intelligence:source_detail' source_id=entry.source.id %}" class="hover:underline">
+                            <a href="{% url 'threat_intelligence:source_detail' source_id=entry.source.id %}"
+                                class="hover:underline">
                                 {{ entry.source.name }}
                             </a>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <div class="w-24 bg-gray-200 rounded-full h-2.5">
                                 <div class="bg-blue-600 h-2.5 rounded-full"
-                                    style="width: {{ entry.confidence_score|floatformat:"0" }}%;"></div>
+                                    style="width: {{ entry.confidence_score|floatformat:" 0" }}%;"></div>
                             </div>
                             <span class="text-xs ml-1">{{ entry.confidence_score|floatformat:"0" }}%</span>
                         </td>
@@ -398,9 +406,11 @@
                     {% empty %}
                     <tr>
                         <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                            No threat intelligence entries found. <a href="{% url 'threat_intelligence:analyze_traffic' %}" 
-                              class="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded">
-                              <i class="fas fa-chart-line mr-1"></i> Run traffic analysis</a> to generate entries based on actual traffic.
+                            No threat intelligence entries found. <a
+                                href="{% url 'threat_intelligence:analyze_traffic' %}"
+                                class="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded">
+                                <i class="fas fa-chart-line mr-1"></i> Run traffic analysis</a> to generate entries
+                            based on actual traffic.
                         </td>
                     </tr>
                     {% endfor %}
@@ -429,17 +439,17 @@
             box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
         }
     }
-    
+
     /* Enhanced button styles */
     .btn-primary {
         transition: all 0.2s ease-in-out;
     }
-    
+
     .btn-primary:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
-    
+
     .btn-primary:active {
         transform: translateY(0px);
     }
@@ -448,7 +458,7 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Set the current date for the model update display
         const modelDateElement = document.querySelector('.ai-model-date');
         if (modelDateElement) {

@@ -10,16 +10,23 @@
         </li>
         <li>
             <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clip-rule="evenodd"></path>
                 </svg>
-                <a href="{% url 'threat_intelligence:index' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Threat Intelligence</a>
+                <a href="{% url 'threat_intelligence:index' %}"
+                    class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Threat Intelligence</a>
             </div>
         </li>
         <li aria-current="page">
             <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clip-rule="evenodd"></path>
                 </svg>
                 <span class="ml-1 font-medium text-gray-500 md:ml-2">Entries</span>
             </div>
@@ -34,49 +41,55 @@
         <h1 class="text-2xl font-bold text-gray-900">Threat Intelligence Entries</h1>
         <p class="mt-1 text-sm text-gray-600">
             {% if source_filter %}
-                Showing entries from source ID: {{ source_filter }}
+            Showing entries from source ID: {{ source_filter }}
             {% else %}
-                Browse all threat intelligence entries
+            Browse all threat intelligence entries
             {% endif %}
         </p>
     </div>
-    
+
     <!-- Filters -->
     <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
         <form method="get" class="flex flex-wrap gap-2">
             {% if source_filter %}
-                <input type="hidden" name="source" value="{{ source_filter }}">
+            <input type="hidden" name="source" value="{{ source_filter }}">
             {% endif %}
-            
-            <select name="entry_type" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+
+            <select name="entry_type"
+                class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">All Types</option>
                 {% for entry_type in entry_types %}
-                    <option value="{{ entry_type }}" {% if entry_type_filter == entry_type %}selected{% endif %}>{{ entry_type }}</option>
+                <option value="{{ entry_type }}" {% if entry_type_filter==entry_type %}selected{% endif %}>{{ entry_type
+                    }}</option>
                 {% endfor %}
             </select>
-            
-            <select name="category" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+
+            <select name="category"
+                class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">All Categories</option>
                 {% for category in categories %}
-                    <option value="{{ category }}" {% if category_filter == category %}selected{% endif %}>{{ category }}</option>
+                <option value="{{ category }}" {% if category_filter==category %}selected{% endif %}>{{ category }}
+                </option>
                 {% endfor %}
             </select>
-            
-            <select name="min_confidence" class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+
+            <select name="min_confidence"
+                class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">Any Confidence</option>
-                <option value="0.9" {% if min_confidence == '0.9' %}selected{% endif %}>High (90%+)</option>
-                <option value="0.7" {% if min_confidence == '0.7' %}selected{% endif %}>Medium (70%+)</option>
-                <option value="0.5" {% if min_confidence == '0.5' %}selected{% endif %}>Low (50%+)</option>
+                <option value="0.9" {% if min_confidence=='0.9' %}selected{% endif %}>High (90%+)</option>
+                <option value="0.7" {% if min_confidence=='0.7' %}selected{% endif %}>Medium (70%+)</option>
+                <option value="0.5" {% if min_confidence=='0.5' %}selected{% endif %}>Low (50%+)</option>
             </select>
-            
+
             <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-md">
                 <i class="fas fa-filter mr-1"></i> Filter
             </button>
-            
+
             {% if entry_type_filter or category_filter or min_confidence %}
-                <a href="{% url 'threat_intelligence:entries_list' %}{% if source_filter %}?source={{ source_filter }}{% endif %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-4 py-2 rounded-md">
-                    <i class="fas fa-times mr-1"></i> Clear
-                </a>
+            <a href="{% url 'threat_intelligence:entries_list' %}{% if source_filter %}?source={{ source_filter }}{% endif %}"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-4 py-2 rounded-md">
+                <i class="fas fa-times mr-1"></i> Clear
+            </a>
             {% endif %}
         </form>
     </div>
@@ -88,25 +101,32 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Value
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Source
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Confidence
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Category
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         First Seen
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                     </th>
                 </tr>
@@ -115,7 +135,8 @@
                 {% for entry in page_obj %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 text-sm font-medium text-gray-900 break-all max-w-md">
-                        <a href="{% url 'threat_intelligence:entry_detail' entry_id=entry.id %}" class="text-blue-600 hover:text-blue-900 font-mono">
+                        <a href="{% url 'threat_intelligence:entry_detail' entry_id=entry.id %}"
+                            class="text-blue-600 hover:text-blue-900 font-mono">
                             {{ entry.value }}
                         </a>
                     </td>
@@ -125,13 +146,15 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href="{% url 'threat_intelligence:source_detail' source_id=entry.source.id %}" class="text-blue-600 hover:text-blue-900">
+                        <a href="{% url 'threat_intelligence:source_detail' source_id=entry.source.id %}"
+                            class="text-blue-600 hover:text-blue-900">
                             {{ entry.source.name }}
                         </a>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div class="w-24 bg-gray-200 rounded-full h-2.5">
-                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ entry.confidence_score|floatformat:"0" }}%;"></div>
+                            <div class="bg-blue-600 h-2.5 rounded-full"
+                                style="width: {{ entry.confidence_score|floatformat:" 0" }}%;"></div>
                         </div>
                         <span class="text-xs ml-1">{{ entry.confidence_score|floatformat:"0" }}%</span>
                     </td>
@@ -150,10 +173,12 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div class="flex space-x-2">
-                            <a href="{% url 'threat_intelligence:entry_detail' entry_id=entry.id %}" class="text-blue-500 hover:text-blue-900" title="View Details">
+                            <a href="{% url 'threat_intelligence:entry_detail' entry_id=entry.id %}"
+                                class="text-blue-500 hover:text-blue-900" title="View Details">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <a href="{% url 'threat_intelligence:create_firewall_rule' entry_id=entry.id %}" class="text-green-500 hover:text-green-900" title="Create Firewall Rule">
+                            <a href="{% url 'threat_intelligence:create_firewall_rule' entry_id=entry.id %}"
+                                class="text-green-500 hover:text-green-900" title="Create Firewall Rule">
                                 <i class="fas fa-shield-alt"></i>
                             </a>
                         </div>
@@ -162,7 +187,9 @@
                 {% empty %}
                 <tr>
                     <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                        No entries found. Try <a href="{% url 'threat_intelligence:analyze_traffic' %}" class="text-blue-600 hover:text-blue-900">analyzing traffic</a> to generate entries based on real traffic patterns.
+                        No entries found. Try <a href="{% url 'threat_intelligence:analyze_traffic' %}"
+                            class="text-blue-600 hover:text-blue-900">analyzing traffic</a> to generate entries based on
+                        real traffic patterns.
                     </td>
                 </tr>
                 {% endfor %}

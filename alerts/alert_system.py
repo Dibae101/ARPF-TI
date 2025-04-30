@@ -30,7 +30,8 @@ class AlertSystem:
                 title=title,
                 description=description,
                 source_ip=source_ip,
-                triggered_rule=triggered_rule
+                triggered_rule=triggered_rule,
+                alert_status='standard'  # Set default status to standard
             )
             alert.save()
             
@@ -38,8 +39,8 @@ class AlertSystem:
             if related_logs:
                 alert.related_logs.set(related_logs)
             
-            # Send notifications
-            cls.send_notifications(alert)
+            # Don't automatically send notifications, wait for confirmation
+            # by removing this line: cls.send_notifications(alert)
             
             return alert
         
@@ -54,33 +55,72 @@ class AlertSystem:
         """
         if not settings.ENABLE_ALERTS:
             logger.info("Alerts are disabled, skipping notifications")
-            return
+            return False
         
         try:
             # Get notification configurations that match this alert's severity
             configs = AlertNotificationConfig.objects.filter(is_active=True)
             
+            sent_count = 0
             for config in configs:
                 if not config.should_notify(alert):
                     continue
                 
-                if config.notification_type == 'email':
-                    cls._send_email_notification(alert, config)
+                success = cls.send_notification(config, alert)
+                if success:
+                    sent_count += 1
+            
+            # Update the alert as having notifications sent
+            if sent_count > 0:
+                alert.notification_sent = True
+                alert.save()
+                return True
                 
-                elif config.notification_type == 'slack':
-                    cls._send_slack_notification(alert, config)
-                
-                elif config.notification_type == 'webhook':
-                    cls._send_webhook_notification(alert, config)
-                
-                elif config.notification_type == 'sms':
-                    cls._send_sms_notification(alert, config)
+            return False
         
         except Exception as e:
             logger.error(f"Error sending alert notifications: {str(e)}")
+            return False
     
     @classmethod
-    def _send_email_notification(cls, alert, config):
+    def send_notification(cls, config, alert_or_message):
+        """
+        Send a notification using a specific configuration.
+        
+        Args:
+            config: The AlertNotificationConfig to use
+            alert_or_message: Either an Alert object or a dictionary with alert data
+            
+        Returns:
+            bool: True if notification was sent successfully, False otherwise
+        """
+        try:
+            # Determine if we're dealing with an Alert object or a dictionary
+            is_alert_obj = isinstance(alert_or_message, Alert)
+            
+            notification_type = config.notification_type
+            
+            if notification_type == 'email':
+                return cls._send_email_notification(alert_or_message, config, is_alert_obj)
+            
+            elif notification_type == 'slack':
+                return cls._send_slack_notification(alert_or_message, config, is_alert_obj)
+            
+            elif notification_type == 'webhook':
+                return cls._send_webhook_notification(alert_or_message, config, is_alert_obj)
+            
+            elif notification_type == 'sms':
+                return cls._send_sms_notification(alert_or_message, config, is_alert_obj)
+            
+            logger.warning(f"Unknown notification type: {notification_type}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error sending notification: {str(e)}")
+            return False
+    
+    @classmethod
+    def _send_email_notification(cls, alert_or_message, config, is_alert_obj=True):
         """
         Send an email notification.
         """
@@ -89,27 +129,48 @@ class AlertSystem:
             recipients = [r.strip() for r in config.recipients.split(',') if r.strip()]
             if not recipients:
                 logger.warning(f"No recipients configured for email notification {config.name}")
-                return
+                return False
             
             # Create email message
             msg = MIMEMultipart()
             msg['From'] = settings.EMAIL_HOST_USER
             msg['To'] = ", ".join(recipients)
-            msg['Subject'] = f"ARPF-TI Security Alert: {alert.title}"
             
-            # Create email body
-            body = f"""
-            <html>
-            <body>
-                <h2>Security Alert: {alert.title}</h2>
-                <p><strong>Severity:</strong> {alert.get_severity_display()}</p>
-                <p><strong>Type:</strong> {alert.get_alert_type_display()}</p>
-                <p><strong>Time:</strong> {alert.timestamp}</p>
-                <p><strong>Source IP:</strong> {alert.source_ip or 'N/A'}</p>
-                <p><strong>Description:</strong> {alert.description}</p>
-            </body>
-            </html>
-            """
+            if is_alert_obj:
+                # It's an Alert object
+                alert = alert_or_message
+                msg['Subject'] = f"ARPF-TI Security Alert: {alert.title}"
+                
+                # Create email body
+                body = f"""
+                <html>
+                <body>
+                    <h2>Security Alert: {alert.title}</h2>
+                    <p><strong>Severity:</strong> {alert.get_severity_display()}</p>
+                    <p><strong>Type:</strong> {alert.get_alert_type_display()}</p>
+                    <p><strong>Time:</strong> {alert.timestamp}</p>
+                    <p><strong>Source IP:</strong> {alert.source_ip or 'N/A'}</p>
+                    <p><strong>Description:</strong> {alert.description}</p>
+                </body>
+                </html>
+                """
+            else:
+                # It's a dictionary
+                message = alert_or_message
+                msg['Subject'] = f"ARPF-TI Security Alert: {message.get('title', 'No Title')}"
+                
+                # Create email body
+                body = f"""
+                <html>
+                <body>
+                    <h2>Security Alert: {message.get('title', 'No Title')}</h2>
+                    <p><strong>Severity:</strong> {message.get('severity', 'Unknown')}</p>
+                    <p><strong>Source:</strong> {message.get('source', 'Unknown')}</p>
+                    <p><strong>Time:</strong> {message.get('timestamp', timezone.now())}</p>
+                    <p><strong>Message:</strong> {message.get('message', 'No message provided')}</p>
+                </body>
+                </html>
+                """
             
             msg.attach(MIMEText(body, 'html'))
             
@@ -124,12 +185,14 @@ class AlertSystem:
                 server.send_message(msg)
             
             logger.info(f"Email alert sent to {len(recipients)} recipients")
+            return True
         
         except Exception as e:
             logger.error(f"Error sending email notification: {str(e)}")
+            return False
     
     @classmethod
-    def _send_slack_notification(cls, alert, config):
+    def _send_slack_notification(cls, alert_or_message, config, is_alert_obj=True):
         """
         Send a Slack notification.
         """
@@ -141,7 +204,7 @@ class AlertSystem:
             
             if not webhook_url:
                 logger.warning("No Slack webhook URL configured")
-                return
+                return False
             
             # Create Slack message payload
             severity_colors = {
@@ -152,58 +215,97 @@ class AlertSystem:
                 'critical': '#f54242'
             }
             
-            color = severity_colors.get(alert.severity, '#4287f5')
-            
-            payload = {
-                "attachments": [
-                    {
-                        "fallback": f"Security Alert: {alert.title}",
-                        "color": color,
-                        "title": f"Security Alert: {alert.title}",
-                        "fields": [
-                            {
-                                "title": "Severity",
-                                "value": alert.get_severity_display(),
-                                "short": True
-                            },
-                            {
-                                "title": "Type",
-                                "value": alert.get_alert_type_display(),
-                                "short": True
-                            },
-                            {
-                                "title": "Time",
-                                "value": alert.timestamp.isoformat(),
-                                "short": True
-                            },
-                            {
-                                "title": "Source IP",
-                                "value": alert.source_ip or "N/A",
-                                "short": True
-                            },
-                            {
-                                "title": "Description",
-                                "value": alert.description,
-                                "short": False
-                            }
-                        ],
-                        "footer": "ARPF-TI Web Application Firewall",
-                        "ts": int(alert.timestamp.timestamp())
-                    }
-                ]
-            }
+            if is_alert_obj:
+                # It's an Alert object
+                alert = alert_or_message
+                color = severity_colors.get(alert.severity, '#4287f5')
+                
+                payload = {
+                    "attachments": [
+                        {
+                            "fallback": f"Security Alert: {alert.title}",
+                            "color": color,
+                            "title": f"Security Alert: {alert.title}",
+                            "fields": [
+                                {
+                                    "title": "Severity",
+                                    "value": alert.get_severity_display(),
+                                    "short": True
+                                },
+                                {
+                                    "title": "Type",
+                                    "value": alert.get_alert_type_display(),
+                                    "short": True
+                                },
+                                {
+                                    "title": "Time",
+                                    "value": alert.timestamp.isoformat(),
+                                    "short": True
+                                },
+                                {
+                                    "title": "Source IP",
+                                    "value": alert.source_ip or "N/A",
+                                    "short": True
+                                },
+                                {
+                                    "title": "Description",
+                                    "value": alert.description,
+                                    "short": False
+                                }
+                            ],
+                            "footer": "ARPF-TI Web Application Firewall",
+                            "ts": int(alert.timestamp.timestamp())
+                        }
+                    ]
+                }
+            else:
+                # It's a dictionary
+                message = alert_or_message
+                severity = message.get('severity', 'medium')
+                color = severity_colors.get(severity, '#4287f5')
+                
+                payload = {
+                    "attachments": [
+                        {
+                            "fallback": f"Security Alert: {message.get('title', 'No Title')}",
+                            "color": color,
+                            "title": f"Security Alert: {message.get('title', 'No Title')}",
+                            "fields": [
+                                {
+                                    "title": "Severity",
+                                    "value": message.get('severity', 'Unknown'),
+                                    "short": True
+                                },
+                                {
+                                    "title": "Source",
+                                    "value": message.get('source', 'Unknown'),
+                                    "short": True
+                                },
+                                {
+                                    "title": "Message",
+                                    "value": message.get('message', 'No message provided'),
+                                    "short": False
+                                }
+                            ],
+                            "footer": "ARPF-TI Web Application Firewall",
+                            "ts": int(timezone.now().timestamp())
+                        }
+                    ]
+                }
             
             # Send Slack notification
             response = requests.post(webhook_url, json=payload)
             response.raise_for_status()
             
             logger.info("Slack notification sent successfully")
+            return True
         
         except Exception as e:
             logger.error(f"Error sending Slack notification: {str(e)}")
+            return False
     
     @classmethod
-    def _send_webhook_notification(cls, alert, config):
+    def _send_webhook_notification(cls, alert_or_message, config, is_alert_obj=True):
         """
         Send a notification to a custom webhook.
         """
@@ -212,40 +314,57 @@ class AlertSystem:
             webhook_url = config.configuration.get('webhook_url')
             if not webhook_url:
                 logger.warning(f"No webhook URL configured for {config.name}")
-                return
+                return False
             
             # Create webhook payload
-            payload = {
-                "alert_id": alert.id,
-                "alert_type": alert.alert_type,
-                "severity": alert.severity,
-                "title": alert.title,
-                "description": alert.description,
-                "source_ip": alert.source_ip,
-                "timestamp": alert.timestamp.isoformat(),
-                "is_acknowledged": alert.is_acknowledged
-            }
+            if is_alert_obj:
+                # It's an Alert object
+                alert = alert_or_message
+                payload = {
+                    "alert_id": alert.id,
+                    "alert_type": alert.alert_type,
+                    "severity": alert.severity,
+                    "title": alert.title,
+                    "description": alert.description,
+                    "source_ip": alert.source_ip,
+                    "timestamp": alert.timestamp.isoformat(),
+                    "is_acknowledged": alert.is_acknowledged
+                }
+            else:
+                # It's a dictionary - pass it directly
+                payload = alert_or_message
             
             # Add custom headers if configured
-            headers = config.configuration.get('headers', {})
+            headers = {}
+            try:
+                if 'headers' in config.configuration:
+                    if isinstance(config.configuration['headers'], str):
+                        headers = json.loads(config.configuration['headers'])
+                    else:
+                        headers = config.configuration['headers']
+            except (json.JSONDecodeError, TypeError):
+                logger.warning(f"Invalid headers configuration for webhook {config.name}")
             
             # Send webhook notification
             response = requests.post(webhook_url, json=payload, headers=headers)
             response.raise_for_status()
             
             logger.info(f"Webhook notification sent to {webhook_url}")
+            return True
         
         except Exception as e:
             logger.error(f"Error sending webhook notification: {str(e)}")
+            return False
     
     @classmethod
-    def _send_sms_notification(cls, alert, config):
+    def _send_sms_notification(cls, alert_or_message, config, is_alert_obj=True):
         """
         Send an SMS notification. Implementation depends on your SMS provider.
         """
         # This is a placeholder for SMS notification logic
         # You would implement this based on your chosen SMS provider
         logger.info("SMS notification not implemented yet")
+        return False
 
 # Create a singleton instance
 alert_system = AlertSystem()
@@ -271,9 +390,9 @@ def create_alert(title, description, severity="medium", source="system", source_
         # Determine alert type based on source
         alert_type_map = {
             'waf': 'rule_match',
-            'ai': 'ai_detection',
-            'system': 'system',
-            'manual': 'manual'
+            'ai': 'ai_detected',
+            'system': 'other',
+            'manual': 'other'
         }
         alert_type = alert_type_map.get(source, 'other')
         
@@ -287,7 +406,7 @@ def create_alert(title, description, severity="medium", source="system", source_
                 triggered_rule = related_object.matched_rule
             related_logs = [related_object]
         
-        # Create the alert
+        # Create the alert - don't automatically send notifications
         return AlertSystem.create_alert(
             alert_type=alert_type,
             severity=severity,

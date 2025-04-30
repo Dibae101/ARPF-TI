@@ -7,6 +7,7 @@ import json
 import csv
 from .models import Alert, AlertNotificationConfig, AlertComment
 from .alert_system import alert_system
+from .gemini_integration import gemini_integration
 
 @login_required
 def alert_list(request):
@@ -17,6 +18,7 @@ def alert_list(request):
     severity_filter = request.GET.get('severity')
     acknowledged_filter = request.GET.get('acknowledged')
     type_filter = request.GET.get('type')
+    status_filter = request.GET.get('status', '')
     
     if severity_filter:
         alerts = alerts.filter(severity=severity_filter)
@@ -27,14 +29,27 @@ def alert_list(request):
     
     if type_filter:
         alerts = alerts.filter(alert_type=type_filter)
+        
+    if status_filter:
+        alerts = alerts.filter(alert_status=status_filter)
+    
+    # Separate alerts into different categories
+    suggested_alerts = Alert.objects.filter(alert_status='suggested').order_by('-timestamp')
+    sent_alerts = Alert.objects.filter(alert_status='confirmed').order_by('-timestamp')
+    standard_alerts = Alert.objects.filter(alert_status='standard').order_by('-timestamp')
     
     context = {
         'alerts': alerts,
+        'suggested_alerts': suggested_alerts,
+        'sent_alerts': sent_alerts,
+        'standard_alerts': standard_alerts,
         'severity_filter': severity_filter,
         'acknowledged_filter': acknowledged_filter,
         'type_filter': type_filter,
+        'status_filter': status_filter,
         'alert_types': Alert.ALERT_TYPES,
-        'severity_levels': Alert.SEVERITY_LEVELS
+        'severity_levels': Alert.SEVERITY_LEVELS,
+        'alert_statuses': Alert.ALERT_STATUS
     }
     
     return render(request, 'alerts/alert_list.html', context)
@@ -287,3 +302,109 @@ def export_alert(request, alert_id):
         response = HttpResponse(json.dumps(alert_data, indent=2), content_type='application/json')
         response['Content-Disposition'] = f'attachment; filename="alert_{alert.id}.json"'
         return response
+
+@login_required
+def generate_alert_suggestions(request):
+    """Generate alert suggestions using Gemini AI for all unacknowledged standard alerts."""
+    if request.method == 'POST':
+        # Get all unacknowledged standard alerts without suggestions
+        alerts = Alert.objects.filter(
+            is_acknowledged=False, 
+            alert_status='standard',
+            gemini_suggestion__isnull=True
+        )
+        
+        suggestion_count = 0
+        for alert in alerts:
+            # Get suggestion from Gemini
+            suggestion_result = gemini_integration.analyze_alert(alert)
+            
+            # Save suggestion to alert
+            alert.gemini_suggestion = json.dumps(suggestion_result)
+            
+            # If Gemini suggests sending the alert, mark it as suggested
+            if suggestion_result.get('suggestion', '').startswith('Yes'):
+                alert.alert_status = 'suggested'
+                suggestion_count += 1
+            
+            alert.save()
+        
+        messages.success(request, f'Generated {suggestion_count} new alert suggestions.')
+        return redirect('alerts:alert_list')
+    
+    return redirect('alerts:alert_list')
+
+@login_required
+def confirm_alert(request, alert_id):
+    """Confirm an alert suggestion and send it to notification channels."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    if request.method == 'POST':
+        # Update alert status to confirmed
+        alert.alert_status = 'confirmed'
+        alert.save()
+        
+        # Send the alert to notification channels
+        alert_system.send_notifications(alert)
+        
+        # Mark the alert as having notifications sent
+        alert.notification_sent = True
+        alert.save()
+        
+        messages.success(request, f'Alert #{alert.id} has been confirmed and sent to notification channels.')
+        
+        # If AJAX request, return JSON response
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success'})
+        
+        return redirect('alerts:alert_list')
+    
+    return render(request, 'alerts/alert_confirm.html', {'alert': alert})
+
+@login_required
+def ignore_alert_suggestion(request, alert_id):
+    """Ignore an alert suggestion."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    if request.method == 'POST':
+        # Update alert status to ignored
+        alert.alert_status = 'ignored'
+        alert.save()
+        
+        messages.success(request, f'Alert #{alert.id} suggestion has been ignored.')
+        
+        # If AJAX request, return JSON response
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success'})
+        
+        return redirect('alerts:alert_list')
+    
+    return render(request, 'alerts/alert_ignore.html', {'alert': alert})
+
+@login_required
+def view_gemini_suggestion(request, alert_id):
+    """View Gemini's suggestion for an alert."""
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    # If no suggestion exists yet, generate one
+    if not alert.gemini_suggestion:
+        suggestion_result = gemini_integration.analyze_alert(alert)
+        alert.gemini_suggestion = json.dumps(suggestion_result)
+        alert.save()
+    
+    # Parse the suggestion JSON
+    try:
+        suggestion_data = json.loads(alert.gemini_suggestion)
+    except (json.JSONDecodeError, TypeError):
+        suggestion_data = {
+            'suggestion': 'Error parsing suggestion data',
+            'reasoning': 'The stored suggestion data is not valid JSON.',
+            'suggested_actions': 'Please regenerate the suggestion.'
+        }
+    
+    context = {
+        'alert': alert,
+        'suggestion_data': suggestion_data
+    }
+    
+    return render(request, 'alerts/alert_suggestion_detail.html', context)

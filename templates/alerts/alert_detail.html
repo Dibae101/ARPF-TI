@@ -1,364 +1,320 @@
 {% extends 'base.html' %}
 
-{% block title %}Alert: {{ alert.title }} - ARPF-TI{% endblock %}
+{% block title %}Alert Details: {{ alert.title }} | ARPF-TI{% endblock %}
 
-{% block breadcrumbs %}
-<nav class="flex mb-6" aria-label="Breadcrumb">
+{% block content %}
+<nav class="flex mb-4" aria-label="Breadcrumb">
     <ol class="inline-flex items-center space-x-1 md:space-x-3">
         <li class="inline-flex items-center">
-            <a href="{% url 'dashboard:index' %}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+            <a href="{% url 'dashboard:index' %}"
+                class="inline-flex items-center text-sm text-gray-500 hover:text-blue-600">
+                <i class="fas fa-home mr-2"></i>
+                Dashboard
+            </a>
         </li>
         <li>
             <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                </svg>
-                <a href="{% url 'alerts:alert_list' %}" class="ml-1 text-gray-500 hover:text-gray-700 md:ml-2">Alerts</a>
+                <i class="fas fa-chevron-right text-gray-400 mx-2 text-sm"></i>
+                <a href="{% url 'alerts:alert_list' %}" class="text-sm text-gray-500 hover:text-blue-600">
+                    Security Alerts
+                </a>
             </div>
         </li>
         <li aria-current="page">
             <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                </svg>
-                <span class="ml-1 font-medium text-gray-500 md:ml-2">Alert Detail</span>
+                <i class="fas fa-chevron-right text-gray-400 mx-2 text-sm"></i>
+                <span class="text-sm text-gray-700 truncate max-w-xs">
+                    {{ alert.title }}
+                </span>
             </div>
         </li>
     </ol>
 </nav>
-{% endblock %}
 
-{% block content %}
-<div class="mb-6 flex justify-between items-center">
-    <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ alert.title }}</h1>
-        <p class="mt-1 text-sm text-gray-600">
-            {{ alert.timestamp|date:"F j, Y, H:i:s" }}
-            <span class="ml-2 severity-{{ alert.severity }}">{{ alert.get_severity_display }}</span>
-        </p>
-    </div>
-    <div class="flex space-x-3">
-        {% if not alert.is_acknowledged %}
-            <a href="{% url 'alerts:alert_acknowledge' alert_id=alert.id %}?next={{ request.path }}" class="btn-secondary">
-                Acknowledge
+<div class="mb-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-xl font-bold text-gray-900 flex items-center">
+            {{ alert.title }}
+            {% if alert.alert_status == 'suggested' %}
+            <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">
+                <i class="fas fa-robot mr-1"></i> AI Suggested
+            </span>
+            {% elif alert.alert_status == 'confirmed' %}
+            <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                Confirmed & Sent
+            </span>
+            {% elif alert.alert_status == 'ignored' %}
+            <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">
+                Ignored
+            </span>
+            {% endif %}
+        </h1>
+        <div class="flex space-x-3">
+            {% if not alert.is_acknowledged %}
+            <a href="{% url 'alerts:alert_acknowledge' alert_id=alert.id %}"
+                class="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                <i class="fas fa-check mr-1"></i> Acknowledge
             </a>
-        {% endif %}
-        
-        <button id="share-alert-btn" class="btn-secondary">
-            Share
-        </button>
+            {% endif %}
+
+            {% if alert.alert_status == 'suggested' %}
+            <form method="post" action="{% url 'alerts:confirm_alert' alert_id=alert.id %}">
+                {% csrf_token %}
+                <button type="submit" class="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                    <i class="fas fa-paper-plane mr-1"></i> Confirm Alert
+                </button>
+            </form>
+            <form method="post" action="{% url 'alerts:ignore_alert_suggestion' alert_id=alert.id %}">
+                {% csrf_token %}
+                <button type="submit" class="px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
+                    <i class="fas fa-ban mr-1"></i> Ignore Suggestion
+                </button>
+            </form>
+            {% endif %}
+        </div>
     </div>
+    <p class="mt-1 text-sm text-gray-500">
+        Detected {{ alert.timestamp|timesince }} ago
+    </p>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <!-- Alert Details Card -->
-    <div class="lg:col-span-2">
-        <div class="card mb-6">
-            <div class="card-header">
-                Alert Details
-            </div>
-            <div class="card-body">
-                <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Alert Type</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ alert.get_alert_type_display }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Severity</dt>
-                        <dd class="mt-1 text-sm text-gray-900">
-                            <span class="severity-{{ alert.severity }}">{{ alert.get_severity_display }}</span>
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Status</dt>
-                        <dd class="mt-1 text-sm text-gray-900">
-                            {% if alert.is_acknowledged %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
-                                    Acknowledged by {{ alert.acknowledged_by }} at {{ alert.acknowledged_at|date:"F j, Y, H:i:s" }}
-                                </span>
-                            {% else %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                                    New
-                                </span>
-                            {% endif %}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Created At</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ alert.timestamp|date:"F j, Y, H:i:s" }}</dd>
-                    </div>
-                    
-                    {% if alert.source_ip %}
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Source IP</dt>
-                        <dd class="mt-1 text-sm text-gray-900">
-                            <a href="{% url 'core:log_list' %}?ip={{ alert.source_ip }}" class="text-blue-600 hover:text-blue-900">
-                                {{ alert.source_ip }}
-                            </a>
-                            
-                            {% if alert.country_code %}
-                                <span class="ml-2 px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
-                                    {{ alert.country_code }}
-                                </span>
-                            {% endif %}
-                        </dd>
-                    </div>
-                    {% endif %}
-                    
-                    {% if alert.related_rule %}
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Related Rule</dt>
-                        <dd class="mt-1 text-sm text-gray-900">
-                            <a href="{% url 'core:rule_detail' rule_id=alert.related_rule.id %}" class="text-blue-600 hover:text-blue-900">
-                                {{ alert.related_rule.name }}
-                            </a>
-                        </dd>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="sm:col-span-2">
-                        <dt class="text-sm font-medium text-gray-500">Description</dt>
-                        <dd class="mt-1 text-sm text-gray-900">
-                            {{ alert.description|linebreaksbr }}
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-        </div>
-        
-        <!-- Request Details Card (if applicable) -->
-        {% if alert.request_data %}
-        <div class="card mb-6">
-            <div class="card-header">
-                Request Details
-            </div>
-            <div class="card-body">
-                <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                    {% if alert.request_data.method %}
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">Method</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ alert.request_data.method }}</dd>
-                    </div>
-                    {% endif %}
-                    
-                    {% if alert.request_data.path %}
-                    <div class="sm:col-span-2">
-                        <dt class="text-sm font-medium text-gray-500">Path</dt>
-                        <dd class="mt-1 text-sm font-mono text-gray-900 bg-gray-50 p-2 rounded">
-                            {{ alert.request_data.path }}
-                        </dd>
-                    </div>
-                    {% endif %}
-                    
-                    {% if alert.request_data.headers %}
-                    <div class="sm:col-span-2">
-                        <dt class="text-sm font-medium text-gray-500">Headers</dt>
-                        <dd class="mt-1 text-sm font-mono bg-gray-50 p-2 rounded overflow-x-auto">
-                            <pre class="text-gray-900">{{ alert.request_data.headers|pprint }}</pre>
-                        </dd>
-                    </div>
-                    {% endif %}
-                    
-                    {% if alert.request_data.body %}
-                    <div class="sm:col-span-2">
-                        <dt class="text-sm font-medium text-gray-500">Body</dt>
-                        <dd class="mt-1 text-sm font-mono bg-gray-50 p-2 rounded overflow-x-auto">
-                            <pre class="text-gray-900">{{ alert.request_data.body }}</pre>
-                        </dd>
-                    </div>
-                    {% endif %}
-                </dl>
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- Comments Section -->
-        <div class="card mb-6">
-            <div class="card-header">
-                Comments & Notes
-            </div>
-            <div class="card-body">
-                {% if alert.comments.all %}
-                    <div class="space-y-4 mb-6">
-                        {% for comment in alert.comments.all %}
-                            <div class="bg-gray-50 p-4 rounded-lg">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h4 class="text-sm font-semibold text-gray-800">{{ comment.user }}</h4>
-                                    <span class="text-xs text-gray-500">{{ comment.created_at|date:"M d, Y H:i" }}</span>
-                                </div>
-                                <p class="text-sm text-gray-700">{{ comment.content|linebreaksbr }}</p>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-gray-500 text-center py-4">No comments yet</p>
-                {% endif %}
-                
-                <form method="post" action="{% url 'alerts:add_comment' alert_id=alert.id %}">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Add a comment</label>
-                        <textarea id="comment" name="content" rows="3" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Add your analysis, recommendations, or notes about this alert"></textarea>
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="submit" class="btn-primary">Add Comment</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Sidebar Cards -->
-    <div class="lg:col-span-1">
-        <!-- Related Alerts -->
-        <div class="card mb-6">
-            <div class="card-header">
-                Related Alerts
-            </div>
-            <div class="card-body">
-                {% if related_alerts %}
-                    <div class="space-y-3">
-                        {% for related in related_alerts %}
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <a href="{% url 'alerts:alert_detail' alert_id=related.id %}" class="text-sm text-blue-600 hover:text-blue-900">
-                                        {{ related.title|truncatechars:25 }}
-                                    </a>
-                                    <p class="text-xs text-gray-500">{{ related.timestamp|date:"M d, H:i" }}</p>
-                                </div>
-                                <span class="severity-{{ related.severity }}">{{ related.get_severity_display }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-gray-500 text-center py-4">No related alerts found</p>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Threat Intelligence -->
-        <div class="card mb-6">
-            <div class="card-header">
-                Threat Intelligence
-            </div>
-            <div class="card-body">
-                {% if ti_data %}
-                    <div class="space-y-4">
-                        {% for item in ti_data %}
-                            <div class="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
-                                <h4 class="text-sm font-semibold text-gray-800 mb-1">{{ item.source }}</h4>
-                                <p class="text-sm text-gray-700">{{ item.assessment }}</p>
-                                {% if item.tags %}
-                                    <div class="mt-2 flex flex-wrap gap-1">
-                                        {% for tag in item.tags %}
-                                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
-                                                {{ tag }}
-                                            </span>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-gray-500 text-center py-4">No threat intelligence available</p>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Recommended Actions -->
-        <div class="card mb-6">
-            <div class="card-header">
-                Recommended Actions
-            </div>
-            <div class="card-body">
-                <div class="space-y-4">
-                    {% if alert.source_ip %}
-                        <div>
-                            <a href="{% url 'core:rule_add' %}?ip={{ alert.source_ip }}&action=block" class="text-sm text-blue-600 hover:text-blue-900 flex items-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-                                </svg>
-                                Block this IP address
-                            </a>
-                        </div>
-                    {% endif %}
-                    
-                    <div>
-                        <a href="{% url 'alerts:mark_as_false_positive' alert_id=alert.id %}" class="text-sm text-blue-600 hover:text-blue-900 flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Mark as false positive
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="col-span-1 lg:col-span-2">
+        <!-- Alert Details -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Alert Details</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="border-b border-gray-200 pb-4">
+                    <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Type</h3>
+                    <p class="mt-1 text-sm text-gray-900">{{ alert.get_alert_type_display }}</p>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</h3>
+                    <p class="mt-1 text-sm">
+                        {% if alert.severity == 'critical' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Critical
+                        </span>
+                        {% elif alert.severity == 'high' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                            High
+                        </span>
+                        {% elif alert.severity == 'medium' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Medium
+                        </span>
+                        {% elif alert.severity == 'low' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Low
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            Info
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Source IP</h3>
+                    <p class="mt-1 text-sm text-gray-900">
+                        {{ alert.source_ip|default:"Not available" }}
+                    </p>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Status</h3>
+                    <p class="mt-1 text-sm">
+                        {% if alert.is_acknowledged %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Acknowledged
+                        </span>
+                        <span class="ml-1 text-xs text-gray-500">
+                            by {{ alert.acknowledged_by.username }} {{ alert.acknowledged_at|timesince }} ago
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Unacknowledged
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if alert.triggered_rule %}
+                <div class="border-b border-gray-200 pb-4">
+                    <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Triggered Rule</h3>
+                    <p class="mt-1 text-sm text-gray-900">
+                        <a href="{% url 'core:rule_detail' rule_id=alert.triggered_rule.id %}"
+                            class="text-blue-600 hover:text-blue-900">
+                            {{ alert.triggered_rule.name }}
                         </a>
-                    </div>
-                    
-                    <div>
-                        <a href="{% url 'alerts:export_alert' alert_id=alert.id %}" class="text-sm text-blue-600 hover:text-blue-900 flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                            </svg>
-                            Export alert data
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if alert.request_log %}
+                <div class="border-b border-gray-200 pb-4">
+                    <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Related Request</h3>
+                    <p class="mt-1 text-sm text-gray-900">
+                        <a href="{% url 'core:request_log_detail' log_id=alert.request_log.id %}"
+                            class="text-blue-600 hover:text-blue-900">
+                            View Request Details
                         </a>
-                    </div>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="mt-4">
+                <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Description</h3>
+                <div class="border border-gray-200 rounded-md p-4 bg-gray-50">
+                    <pre class="text-sm text-gray-800 whitespace-pre-wrap">{{ alert.description }}</pre>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Modal for sharing -->
-<div id="share-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Share Alert</h3>
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Alert URL</label>
-            <div class="flex rounded-md shadow-sm">
-                <input id="share-url" type="text" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" value="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}" readonly>
-                <button id="copy-url-btn" type="button" class="ml-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Copy
-                </button>
+        <!-- AI Analysis -->
+        {% if alert.gemini_suggestion %}
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-robot mr-2 text-purple-500"></i> AI Analysis
+                </h2>
+                <span class="text-xs text-gray-500">Generated {{ alert.gemini_suggestion.created_at|timesince }}
+                    ago</span>
+            </div>
+
+            <div class="mt-4">
+                <div class="border border-purple-100 rounded-md p-4 bg-purple-50">
+                    <div class="text-sm text-gray-800">{{ alert.gemini_suggestion.content|linebreaks }}</div>
+                </div>
             </div>
         </div>
-        <div class="flex justify-end">
-            <button id="close-modal-btn" type="button" class="btn-secondary">Close</button>
+        {% endif %}
+
+        <!-- Comments -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Comments</h2>
+
+            {% if comments %}
+            <div class="space-y-4 mb-6">
+                {% for comment in comments %}
+                <div class="flex space-x-3">
+                    <div class="flex-shrink-0">
+                        <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                            <span class="text-white font-medium">{{ comment.user.username|slice:":1"|upper }}</span>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium text-gray-900">{{ comment.user.username }}</span>
+                                <span class="text-xs text-gray-500">{{ comment.timestamp|timesince }} ago</span>
+                            </div>
+                            <p class="text-sm text-gray-800">{{ comment.content }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-gray-500 my-4">
+                <p>No comments yet</p>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'alerts:add_comment' alert_id=alert.id %}">
+                {% csrf_token %}
+                <div class="mt-4">
+                    <label for="comment-content" class="block text-sm font-medium text-gray-700 mb-1">Add a
+                        comment</label>
+                    <textarea id="comment-content" name="content" rows="3"
+                        class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        required></textarea>
+                </div>
+                <div class="mt-2 flex justify-end">
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                        Add Comment
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<script>
-    // Share modal functionality
-    const shareBtn = document.getElementById('share-alert-btn');
-    const shareModal = document.getElementById('share-modal');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const copyUrlBtn = document.getElementById('copy-url-btn');
-    const shareUrl = document.getElementById('share-url');
-    
-    shareBtn.addEventListener('click', function() {
-        shareModal.classList.remove('hidden');
-    });
-    
-    closeModalBtn.addEventListener('click', function() {
-        shareModal.classList.add('hidden');
-    });
-    
-    // Close modal when clicking outside
-    shareModal.addEventListener('click', function(event) {
-        if (event.target === shareModal) {
-            shareModal.classList.add('hidden');
-        }
-    });
-    
-    // Copy URL functionality
-    copyUrlBtn.addEventListener('click', function() {
-        shareUrl.select();
-        document.execCommand('copy');
-        copyUrlBtn.textContent = 'Copied!';
-        setTimeout(function() {
-            copyUrlBtn.textContent = 'Copy';
-        }, 2000);
-    });
-</script>
+    <div class="col-span-1">
+        <!-- Related Information -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Similar Alerts</h2>
+
+            {% if similar_alerts %}
+            <div class="space-y-3">
+                {% for similar in similar_alerts %}
+                <div class="border-b border-gray-200 pb-3 mb-3 last:border-b-0 last:pb-0 last:mb-0">
+                    <a href="{% url 'alerts:alert_detail' alert_id=similar.id %}"
+                        class="text-sm font-medium text-blue-600 hover:text-blue-900">
+                        {{ similar.title }}
+                    </a>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ similar.timestamp|date:"M d, Y H:i" }} - {{ similar.get_severity_display }}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-gray-500 my-4">
+                <p>No similar alerts found</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- MITRE ATT&CK Info if available -->
+        {% if mitre_tactics or mitre_techniques %}
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">MITRE ATT&CK</h2>
+
+            {% if mitre_tactics %}
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Tactics</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for tactic in mitre_tactics %}
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {{ tactic }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if mitre_techniques %}
+            <div>
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Techniques</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for technique in mitre_techniques %}
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                        {{ technique }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Reference Links -->
+        {% if reference_links %}
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Reference Links</h2>
+
+            <ul class="space-y-2 list-disc list-inside text-sm text-blue-600">
+                {% for link in reference_links %}
+                <li><a href="{{ link.url }}" target="_blank" rel="noopener" class="hover:text-blue-800">{{ link.title
+                        }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

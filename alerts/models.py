@@ -30,6 +30,13 @@ class Alert(models.Model):
         ('critical', 'Critical')
     ]
     
+    ALERT_STATUS = [
+        ('suggested', 'Suggested by Gemini'),
+        ('confirmed', 'Confirmed and Sent'),
+        ('ignored', 'Ignored'),
+        ('standard', 'Standard Alert')
+    ]
+    
     alert_type = models.CharField(max_length=20, choices=ALERT_TYPES)
     severity = models.CharField(max_length=10, choices=SEVERITY_LEVELS, default='medium')
     title = models.CharField(max_length=255)
@@ -41,6 +48,9 @@ class Alert(models.Model):
     is_acknowledged = models.BooleanField(default=False)
     acknowledged_by = models.CharField(max_length=255, blank=True, null=True)
     acknowledged_at = models.DateTimeField(null=True, blank=True)
+    gemini_suggestion = models.TextField(blank=True, null=True, help_text="Gemini AI suggestion about this alert")
+    alert_status = models.CharField(max_length=15, choices=ALERT_STATUS, default='standard', help_text="Status of the alert for notification purposes")
+    notification_sent = models.BooleanField(default=False, help_text="Whether this alert has been sent to notification channels")
     
     def __str__(self):
         return f"{self.title} ({self.get_severity_display()} - {self.timestamp})"
@@ -101,3 +111,66 @@ class AlertComment(models.Model):
     
     def __str__(self):
         return f"Comment on {self.alert.title} by {self.user.username if self.user else 'Unknown'}"
+
+
+class GeminiSuggestion(models.Model):
+    """Suggestions from Gemini AI about alerts"""
+    alert = models.OneToOneField('Alert', on_delete=models.CASCADE, related_name='ai_suggestion')
+    suggestion = models.CharField(max_length=50)  # e.g. "Yes", "No", "Maybe"
+    reasoning = models.TextField()
+    suggested_actions = models.TextField()
+    confidence_score = models.FloatField(default=0.0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Add feedback fields for the feedback loop
+    feedback_rating = models.IntegerField(null=True, blank=True, 
+                                         help_text="Rating from 1-5 on how accurate the suggestion was")
+    feedback_notes = models.TextField(blank=True, 
+                                     help_text="Additional notes or comments about the suggestion")
+    feedback_provided_by = models.ForeignKey(User, on_delete=models.SET_NULL, 
+                                           null=True, blank=True, 
+                                           related_name='gemini_feedback')
+    feedback_provided_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"Gemini Suggestion for Alert #{self.alert_id}: {self.suggestion}"
+    
+    def provide_feedback(self, user, rating, notes=""):
+        """
+        Record feedback on this suggestion to improve future recommendations
+        
+        Args:
+            user: The User providing the feedback
+            rating: Integer from 1-5 on how accurate the suggestion was
+            notes: Optional text notes about the suggestion
+        """
+        self.feedback_rating = rating
+        self.feedback_notes = notes
+        self.feedback_provided_by = user
+        self.feedback_provided_at = timezone.now()
+        self.save()
+        
+        # Log this feedback for future analysis
+        from django.core.cache import cache
+        import json
+        
+        # Store feedback in a list in the cache for periodic processing
+        feedback_key = "gemini_feedback_queue"
+        feedback_data = {
+            "suggestion_id": self.id,
+            "alert_id": self.alert_id,
+            "alert_type": self.alert.alert_type,
+            "rating": rating,
+            "notes": notes,
+            "timestamp": timezone.now().isoformat()
+        }
+        
+        # Get current feedback queue
+        feedback_queue = cache.get(feedback_key, [])
+        feedback_queue.append(feedback_data)
+        
+        # Store back in cache
+        cache.set(feedback_key, feedback_queue)
+        
+        return True
