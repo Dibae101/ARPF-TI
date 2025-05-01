@@ -196,8 +196,7 @@
             <div class="mt-4">
                 <div class="border border-purple-100 rounded-md p-4 bg-purple-50">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="font-medium text-purple-800">Assessment: {{ alert.gemini_suggestion.assessment
-                            }}</span>
+                        <span class="font-medium text-purple-800">Assessment: {{ alert.gemini_suggestion.assessment }}</span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full 
                             {% if alert.gemini_suggestion.confidence_score >= 0.8 %}bg-green-100 text-green-800
                             {% elif alert.gemini_suggestion.confidence_score >= 0.5 %}bg-yellow-100 text-yellow-800

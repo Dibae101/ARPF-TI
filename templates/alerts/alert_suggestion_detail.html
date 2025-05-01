@@ -57,17 +57,23 @@
         </p>
     </div>
     <div class="flex space-x-3">
-        <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}" class="btn-secondary">
+        <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}" class="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
             Back to Alert
         </a>
 
         {% if alert.alert_status == 'suggested' %}
-        <a href="{% url 'alerts:confirm_alert' alert_id=alert.id %}" class="btn-primary">
-            Confirm and Send Alert
-        </a>
-        <a href="{% url 'alerts:ignore_alert_suggestion' alert_id=alert.id %}" class="btn-danger">
-            Ignore Suggestion
-        </a>
+        <form method="post" action="{% url 'alerts:confirm_alert' alert_id=alert.id %}">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                Confirm and Send Alert
+            </button>
+        </form>
+        <form method="post" action="{% url 'alerts:ignore_alert_suggestion' alert_id=alert.id %}">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                Ignore Suggestion
+            </button>
+        </form>
         {% endif %}
     </div>
 </div>

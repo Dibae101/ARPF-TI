@@ -37,24 +37,21 @@
             <a href="?tab=standard"
                 class="inline-block py-2 px-4 border-b-2 {% if current_tab == 'standard' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-600 hover:border-gray-300{% endif %}">
                 Standard Alerts
-                <span class="ml-1 bg-gray-100 text-gray-800 text-xs px-2 rounded-full">{{ standard_alerts_count
-                    }}</span>
+                <span class="ml-1 bg-gray-100 text-gray-800 text-xs px-2 rounded-full">{{ standard_alerts_count }}</span>
             </a>
         </li>
         <li class="mr-2">
             <a href="?tab=suggested"
                 class="inline-block py-2 px-4 border-b-2 {% if current_tab == 'suggested' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-600 hover:border-gray-300{% endif %}">
                 <i class="fas fa-lightbulb mr-1 text-yellow-400"></i> AI Suggestions
-                <span class="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 rounded-full">{{ suggested_alerts_count
-                    }}</span>
+                <span class="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 rounded-full">{{ suggested_alerts_count }}</span>
             </a>
         </li>
         <li class="mr-2">
             <a href="?tab=confirmed"
                 class="inline-block py-2 px-4 border-b-2 {% if current_tab == 'confirmed' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-600 hover:border-gray-300{% endif %}">
                 Confirmed & Sent
-                <span class="ml-1 bg-green-100 text-green-800 text-xs px-2 rounded-full">{{ confirmed_alerts_count
-                    }}</span>
+                <span class="ml-1 bg-green-100 text-green-800 text-xs px-2 rounded-full">{{ confirmed_alerts_count }}</span>
             </a>
         </li>
     </ul>
@@ -70,7 +67,7 @@
                 class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">All Types</option>
                 {% for type_code, type_name in alert_types %}
-                <option value="{{ type_code }}" {% if type_filter==type_code %}selected{% endif %}>{{ type_name }}
+                <option value="{{ type_code }}" {% if type_filter == type_code %}selected{% endif %}>{{ type_name }}
                 </option>
                 {% endfor %}
             </select>
@@ -81,7 +78,7 @@
                 class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">All Severities</option>
                 {% for severity_code, severity_name in severity_levels %}
-                <option value="{{ severity_code }}" {% if severity_filter==severity_code %}selected{% endif %}>{{
+                <option value="{{ severity_code }}" {% if severity_filter == severity_code %}selected{% endif %}>{{
                     severity_name }}</option>
                 {% endfor %}
             </select>
@@ -91,8 +88,8 @@
             <select id="alert-status"
                 class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="">All Status</option>
-                <option value="0" {% if acknowledged_filter=='0' %}selected{% endif %}>Unacknowledged</option>
-                <option value="1" {% if acknowledged_filter=='1' %}selected{% endif %}>Acknowledged</option>
+                <option value="0" {% if acknowledged_filter == '0' %}selected{% endif %}>Unacknowledged</option>
+                <option value="1" {% if acknowledged_filter == '1' %}selected{% endif %}>Acknowledged</option>
             </select>
         </div>
         <div class="w-full md:w-auto flex-1">

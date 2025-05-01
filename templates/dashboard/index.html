@@ -204,12 +204,13 @@
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Top Source Countries -->
     <div class="card">
-        <div class="card-header">
-            Top Source Countries
+        <div class="card-header flex justify-between items-center">
+            <span>Top Source Countries</span>
+            <a href="{% url 'core:log_list' %}?view=countries" class="text-xs text-blue-600 hover:text-blue-800">View all</a>
         </div>
         <div class="card-body p-0">
             <ul class="divide-y divide-gray-200">
-                {% for country in top_countries %}
+                {% for country in top_countries|slice:":5" %}
                 <li class="px-6 py-4">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
@@ -252,7 +253,7 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        {% for rule in active_rules_list %}
+                        {% for rule in active_rules_list|slice:":5" %}
                         <tr>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">{{ rule.name }}</div>
@@ -287,7 +288,7 @@
         </div>
         <div class="card-body p-0">
             <ul class="divide-y divide-gray-200">
-                {% for alert in recent_alert_list %}
+                {% for alert in recent_alert_list|slice:":5" %}
                 <li class="px-6 py-4 hover:bg-gray-50">
                     <a href="{% url 'alerts:alert_detail' alert_id=alert.id %}" class="block">
                         <div class="flex items-start">

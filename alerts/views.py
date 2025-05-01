@@ -66,7 +66,20 @@ def alert_list(request):
 def alert_detail(request, alert_id):
     """Display details of a specific alert."""
     alert = get_object_or_404(Alert, id=alert_id)
-    return render(request, 'alerts/alert_detail.html', {'alert': alert})
+    
+    # Get comments for this alert
+    comments = AlertComment.objects.filter(alert=alert).order_by('created_at')
+    
+    # Get similar alerts (optional)
+    similar_alerts = Alert.objects.filter(alert_type=alert.alert_type).exclude(id=alert.id).order_by('-timestamp')[:5]
+    
+    context = {
+        'alert': alert,
+        'comments': comments,
+        'similar_alerts': similar_alerts,
+    }
+    
+    return render(request, 'alerts/alert_detail.html', context)
 
 @login_required
 def alert_acknowledge(request, alert_id):
