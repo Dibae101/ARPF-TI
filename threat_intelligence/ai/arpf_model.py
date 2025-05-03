@@ -12,16 +12,60 @@ import random
 import hashlib
 from datetime import datetime, timedelta
 from django.utils import timezone
-from ..models import ThreatIntelEntry, SuggestedFirewallRule
-from ..integrations.arpf_ai_connector import ARPFAIConnector
+import traceback
 
 logger = logging.getLogger(__name__)
 
-# Create a singleton instance for the application to use
-arpf_defense = ARPFAIConnector(source="core_defense")
+# Initialize the ARPFAIConnector with error handling
+try:
+    from ..integrations.arpf_ai_connector import ARPFAIConnector
+    # Create a singleton instance for the application to use
+    arpf_defense = ARPFAIConnector(source="core_defense")
+except ImportError as e:
+    logger.error(f"Error importing ARPFAIConnector: {str(e)}\n{traceback.format_exc()}")
+    # Create a mock implementation to prevent crashes
+    class MockARPFAIConnector:
+        def __init__(self, *args, **kwargs):
+            self.source = kwargs.get('source', 'mock')
+            logger.warning(f"Using MockARPFAIConnector as fallback: {self.source}")
+            
+        def analyze_request(self, request_data):
+            return {
+                'is_threat': False,
+                'attack_type': 'none',
+                'confidence': 0,
+                'explanation': 'Using mock AI connector - analysis unavailable',
+                'recommended_action': 'allow',
+                'timestamp': timezone.now().isoformat(),
+                'source_ip': request_data.get('source_ip'),
+                'request_path': request_data.get('path'),
+                'user_agent': request_data.get('user_agent'),
+                'rule_suggestion': None
+            }
+            
+        def analyze_traffic_patterns(self, days=7):
+            return {
+                'analyzed_requests': 0,
+                'identified_patterns': [],
+                'suggested_rules': [],
+                'timestamp': timezone.now().isoformat()
+            }
+            
+        def get_model_details(self):
+            return {
+                'version': 'mock-1.0',
+                'capabilities': ['Mock AI capabilities'],
+                'status': 'degraded - using mock implementation'
+            }
+            
+        def update_model(self):
+            return {'status': 'mock update - no action taken'}
+            
+    # Use the mock connector as a fallback
+    arpf_defense = MockARPFAIConnector(source="mock_fallback")
 
 # Re-export the ARPFAIConnector for easier imports
-__all__ = ['ARPFAIConnector', 'arpf_defense', 'analyze_request', 'generate_insights', 'get_model_info']
+__all__ = ['arpf_defense', 'analyze_request', 'generate_insights', 'get_model_info']
 
 def analyze_request(request_data):
     """
@@ -33,7 +77,18 @@ def analyze_request(request_data):
     Returns:
         dict: Analysis results with threat assessment
     """
-    return arpf_defense.analyze_request(request_data)
+    try:
+        return arpf_defense.analyze_request(request_data)
+    except Exception as e:
+        logger.error(f"Error in analyze_request: {str(e)}\n{traceback.format_exc()}")
+        # Return a safe default response
+        return {
+            'is_threat': False,
+            'attack_type': 'error',
+            'confidence': 0,
+            'explanation': f'Error in analysis: {str(e)}',
+            'recommended_action': 'allow'
+        }
 
 def generate_insights(days=7):
     """
@@ -45,7 +100,18 @@ def generate_insights(days=7):
     Returns:
         dict: Insights and recommendations
     """
-    return arpf_defense.analyze_traffic_patterns(days=days)
+    try:
+        return arpf_defense.analyze_traffic_patterns(days=days)
+    except Exception as e:
+        logger.error(f"Error in generate_insights: {str(e)}\n{traceback.format_exc()}")
+        # Return a safe default response
+        return {
+            'analyzed_requests': 0,
+            'identified_patterns': [],
+            'suggested_rules': [],
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }
 
 def get_model_info():
     """
@@ -54,10 +120,11 @@ def get_model_info():
     Returns:
         dict: Model information including version and capabilities
     """
-    model_info = arpf_defense.get_model_details()
-    
-    # Add system stats
     try:
+        model_info = arpf_defense.get_model_details()
+        
+        # Add system stats
+        from ..models import ThreatIntelEntry, SuggestedFirewallRule
         model_info.update({
             "entries_analyzed": ThreatIntelEntry.objects.count(),
             "rules_suggested": SuggestedFirewallRule.objects.count(),
@@ -65,10 +132,17 @@ def get_model_info():
                 status__in=['approved', 'auto_approved']
             ).count(),
         })
+        
+        return model_info
     except Exception as e:
-        logger.error(f"Error getting model stats: {e}")
-    
-    return model_info
+        logger.error(f"Error in get_model_info: {str(e)}\n{traceback.format_exc()}")
+        # Return a safe default response
+        return {
+            'version': 'unknown',
+            'capabilities': [],
+            'status': 'error',
+            'error': str(e)
+        }
 
 def update_model():
     """
@@ -77,7 +151,15 @@ def update_model():
     Returns:
         dict: Update status information
     """
-    return arpf_defense.update_model()
+    try:
+        return arpf_defense.update_model()
+    except Exception as e:
+        logger.error(f"Error in update_model: {str(e)}\n{traceback.format_exc()}")
+        # Return a safe default response
+        return {
+            'status': 'error',
+            'error': str(e)
+        }
 
 class LegacyModelManager:
     """

@@ -206,7 +206,8 @@
     <div class="card">
         <div class="card-header flex justify-between items-center">
             <span>Top Source Countries</span>
-            <a href="{% url 'core:log_list' %}?view=countries" class="text-xs text-blue-600 hover:text-blue-800">View all</a>
+            <a href="{% url 'core:log_list' %}?view=countries" class="text-xs text-blue-600 hover:text-blue-800">View
+                all</a>
         </div>
         <div class="card-body p-0">
             <ul class="divide-y divide-gray-200">
@@ -329,56 +330,123 @@
         let trafficChart;
         let currentPeriod = 'day';
 
-        // Hard-coded fallback data for each time period
-        const fallbackData = {
-            day: {
-                labels: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
-                all_requests: [5, 8, 3, 2, 10, 15, 25, 38, 42, 30, 25, 20],
-                blocked_requests: [1, 2, 0, 0, 2, 4, 5, 8, 11, 7, 5, 3]
-            },
-            week: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                all_requests: [120, 145, 135, 160, 180, 110, 90],
-                blocked_requests: [15, 20, 18, 25, 28, 14, 10]
-            },
-            month: {
-                labels: ['01 Apr', '06 Apr', '11 Apr', '16 Apr', '21 Apr', '26 Apr', '30 Apr'],
-                all_requests: [480, 520, 580, 610, 590, 630, 600],
-                blocked_requests: [60, 75, 85, 95, 78, 82, 75]
-            }
-        };
+        // Initial chart loading
+        fetchTrafficData(currentPeriod);
 
-        // Initialize chart with default day data
-        initChart(
-            fallbackData.day.labels,
-            fallbackData.day.all_requests,
-            fallbackData.day.blocked_requests
-        );
+        // Function to fetch actual traffic data from the API
+        function fetchTrafficData(period) {
+            // Show loading indicator
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.classList.add('opacity-50');
+            
+            // Fixed URL: Changed from /dashboard/api/traffic-data/ to /api/traffic-data/
+            fetch(`/api/traffic-data/?range=${period}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Network response error: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Initialize chart with the fetched data
+                    console.log('Received traffic data:', data);
+                    if (data.labels && data.all_requests && data.blocked_requests) {
+                        // Check if we have any real data (non-zero values)
+                        const hasRealData = data.all_requests.some(value => value > 0);
+                        
+                        if (hasRealData) {
+                            // Use the real data from the API
+                            initChart(data.labels, data.all_requests, data.blocked_requests);
+                            console.log('Using real traffic data from API');
+                        } else {
+                            console.warn('No traffic data found in database');
+                            // Show a message to the user
+                            showNoDataMessage();
+                        }
+                    } else {
+                        console.error('Invalid data structure received from API');
+                        showNoDataMessage();
+                    }
+                    chartContainer.classList.remove('opacity-50');
+                })
+                .catch(error => {
+                    console.error('Error fetching traffic data:', error);
+                    // Show error message
+                    showErrorMessage(error);
+                    chartContainer.classList.remove('opacity-50');
+                });
+        }
+
+        function showNoDataMessage() {
+            if (trafficChart) {
+                trafficChart.destroy();
+            }
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full p-8 text-center">
+                    <i class="fas fa-chart-line text-gray-400 text-3xl mb-4"></i>
+                    <h3 class="text-gray-600 font-medium">No traffic data available</h3>
+                    <p class="text-gray-500 text-sm mt-2">Data will appear here once your system has recorded some traffic.</p>
+                </div>`;
+        }
+
+        function showErrorMessage(error) {
+            if (trafficChart) {
+                trafficChart.destroy();
+            }
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full p-8 text-center">
+                    <i class="fas fa-exclamation-triangle text-orange-400 text-3xl mb-4"></i>
+                    <h3 class="text-gray-600 font-medium">Error loading traffic data</h3>
+                    <p class="text-gray-500 text-sm mt-2">${error.message || 'Please try refreshing the page.'}</p>
+                </div>`;
+        }
 
         // Function to initialize the chart
         function initChart(labels, allRequestsData, blockedRequestsData) {
+            // Handle array-like objects from Django JSON serialization
+            if (typeof labels === 'object' && !Array.isArray(labels)) {
+                labels = Object.values(labels);
+            }
+            if (typeof allRequestsData === 'object' && !Array.isArray(allRequestsData)) {
+                allRequestsData = Object.values(allRequestsData);
+            }
+            if (typeof blockedRequestsData === 'object' && !Array.isArray(blockedRequestsData)) {
+                blockedRequestsData = Object.values(blockedRequestsData);
+            }
+
             const chartData = {
                 labels: labels,
                 datasets: [
                     {
                         label: 'All Requests',
                         data: allRequestsData,
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
                         borderWidth: 2,
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
                     },
                     {
                         label: 'Blocked Requests',
                         data: blockedRequestsData,
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        pointBackgroundColor: 'rgb(239, 68, 68)',
                         borderWidth: 2,
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
                     }
                 ]
             };
@@ -394,21 +462,64 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
                         scales: {
                             y: {
                                 beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)',
+                                    drawBorder: false
+                                },
                                 ticks: {
-                                    precision: 0
+                                    precision: 0,
+                                    font: {
+                                        size: 10
+                                    }
+                                },
+                                title: {
+                                    display: false
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: true,
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    }
                                 }
                             }
                         },
                         plugins: {
                             legend: {
-                                position: 'top'
+                                display: true,
+                                position: 'top',
+                                align: 'center',
+                                labels: {
+                                    boxWidth: 15,
+                                    usePointStyle: false,
+                                    padding: 20,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
                             },
                             tooltip: {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                titleColor: '#222',
+                                bodyColor: '#333',
+                                borderColor: 'rgba(0, 0, 0, 0.1)',
+                                borderWidth: 1,
+                                caretSize: 6,
+                                displayColors: true,
                                 mode: 'index',
-                                intersect: false
+                                intersect: false,
+                                padding: 10
                             }
                         }
                     }
@@ -434,19 +545,8 @@
                 // Get the time period from the button
                 currentPeriod = this.dataset.period;
 
-                // Show loading indicator in chart
-                const chartContainer = document.querySelector('.chart-container');
-                chartContainer.classList.add('opacity-50');
-
-                // Use the fallback data for this period
-                setTimeout(() => {
-                    initChart(
-                        fallbackData[currentPeriod].labels,
-                        fallbackData[currentPeriod].all_requests,
-                        fallbackData[currentPeriod].blocked_requests
-                    );
-                    chartContainer.classList.remove('opacity-50');
-                }, 300);
+                // Fetch fresh data for the selected period
+                fetchTrafficData(currentPeriod);
             });
         });
 
@@ -457,12 +557,8 @@
                 this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Refreshing...';
                 this.disabled = true;
 
-                // Reload the current charts
-                initChart(
-                    fallbackData[currentPeriod].labels,
-                    fallbackData[currentPeriod].all_requests,
-                    fallbackData[currentPeriod].blocked_requests
-                );
+                // Fetch fresh data
+                fetchTrafficData(currentPeriod);
 
                 // Reset button after 1 second
                 setTimeout(() => {

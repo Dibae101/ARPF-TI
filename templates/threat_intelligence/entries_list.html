@@ -59,8 +59,7 @@
                 class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">All Types</option>
                 {% for entry_type in entry_types %}
-                <option value="{{ entry_type }}" {% if entry_type_filter==entry_type %}selected{% endif %}>{{ entry_type
-                    }}</option>
+                <option value="{{ entry_type }}" {% if entry_type_filter == entry_type %}selected{% endif %}>{{ entry_type }}</option>
                 {% endfor %}
             </select>
 
@@ -68,17 +67,16 @@
                 class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">All Categories</option>
                 {% for category in categories %}
-                <option value="{{ category }}" {% if category_filter==category %}selected{% endif %}>{{ category }}
-                </option>
+                <option value="{{ category }}" {% if category_filter == category %}selected{% endif %}>{{ category }}</option>
                 {% endfor %}
             </select>
 
             <select name="min_confidence"
                 class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">Any Confidence</option>
-                <option value="0.9" {% if min_confidence=='0.9' %}selected{% endif %}>High (90%+)</option>
-                <option value="0.7" {% if min_confidence=='0.7' %}selected{% endif %}>Medium (70%+)</option>
-                <option value="0.5" {% if min_confidence=='0.5' %}selected{% endif %}>Low (50%+)</option>
+                <option value="0.9" {% if min_confidence == '0.9' %}selected{% endif %}>High (90%+)</option>
+                <option value="0.7" {% if min_confidence == '0.7' %}selected{% endif %}>Medium (70%+)</option>
+                <option value="0.5" {% if min_confidence == '0.5' %}selected{% endif %}>Low (50%+)</option>
             </select>
 
             <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-md">
