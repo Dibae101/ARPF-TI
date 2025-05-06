@@ -1,6 +1,6 @@
 # Development dependencies for ARPF-TI
 
-# Testing env
+# Testing 
 pytest
 pytest-django
 pytest-cov
