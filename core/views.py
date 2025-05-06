@@ -76,13 +76,13 @@ def log_list(request):
     """Display a list of request logs with filtering options."""
     logs = RequestLog.objects.all().order_by('-timestamp')
     
-    # Filtering options
-    ip_filter = request.GET.get('ip')
+    # Filtering options 
+    source_ip = request.GET.get('source_ip')
     path_filter = request.GET.get('path')
     blocked_filter = request.GET.get('blocked')
     
-    if ip_filter:
-        logs = logs.filter(source_ip__icontains=ip_filter)
+    if source_ip:
+        logs = logs.filter(source_ip__icontains=source_ip)
     
     if path_filter:
         logs = logs.filter(path__icontains=path_filter)
@@ -97,7 +97,7 @@ def log_list(request):
     
     return render(request, 'core/logs/list.html', {
         'page_obj': page_obj,
-        'ip_filter': ip_filter,
+        'source_ip': source_ip,
         'path_filter': path_filter,
         'blocked_filter': blocked_filter
     })
