@@ -69,7 +69,11 @@ ARPF-TI is built on a modular architecture consisting of six primary components:
 5. **Dashboard and Analytics**: Provides visualization and reporting capabilities
 6. **Comparison Framework**: Evaluates and compares the effectiveness of different rule sources
 
-The system is implemented as a Django-based web application, with each component encapsulated as a separate Django app for modularity and maintainability. Figure 1 illustrates the high-level architecture of the ARPF-TI system.
+The system is implemented as a Django-based web application, with each component encapsulated as a separate Django app for modularity and maintainability. 
+
+![Figure 1: Threat Intelligence Dashboard](/home/ubuntu/ARPF-TI/research_paper/results/threat-intelligence-dashboard.png)
+
+*Figure 1. The ARPF-TI threat intelligence dashboard provides a central view of intelligence sources, entries, and system activity, enabling security analysts to monitor potential threats.*
 
 ### AI Implementation
 
@@ -121,6 +125,10 @@ Traffic was processed by both AI-generated and manually created rules, and the r
 
 The ARPF-TI system generated 94 AI-based rules compared to 12 manually created rules during the evaluation period. While the manual rules were created by experienced security analysts, the AI system was able to identify more subtle patterns and generate more specific rules for various attack vectors.
 
+![Figure 2: Firewall Rules Management Interface](/home/ubuntu/ARPF-TI/research_paper/results/firewall-rules.png)
+
+*Figure 2. The firewall rules management interface displays both AI-generated and manually created rules, with status indicators and priority settings.*
+
 ### Precision Rate Analysis
 
 AI-generated rules demonstrated a precision rate of 89.2% compared to 71.5% for manually created rules, representing a 17.7% improvement. This higher precision indicates that AI-based rules were more accurate in identifying actual threats while minimizing false alarms.
@@ -133,6 +141,10 @@ In terms of absolute numbers, AI-generated rules correctly identified 267 actual
 
 One of the most significant advantages of the AI-based approach was in reducing false positives. AI-generated rules produced 33 false positives compared to 74 from manual rules, representing a 55% reduction. This reduction in false positives significantly decreases alert fatigue and allows security teams to focus on actual threats.
 
+![Figure 3: Rule Effectiveness Comparison](/home/ubuntu/ARPF-TI/research_paper/results/comparision1.png)
+
+*Figure 3. Side-by-side comparison of key performance metrics between AI and manual rules, showing significant advantages for AI-generated rules across all measured parameters.*
+
 ### Attack Type Effectiveness
 
 The effectiveness comparison across different attack types revealed that AI rules consistently outperformed manual rules for all major attack vectors:
@@ -142,9 +154,17 @@ The effectiveness comparison across different attack types revealed that AI rule
 - Command Injection: AI rules (91% effective) vs. Manual rules (68% effective)
 - Path Traversal: AI rules (86% effective) vs. Manual rules (63% effective)
 
+![Figure 4: Attack Type Effectiveness Comparison](/home/ubuntu/ARPF-TI/research_paper/results/comparision2.png)
+
+*Figure 4. Detailed breakdown of rule effectiveness by attack type demonstrates the consistent superiority of AI-generated rules across multiple attack vectors.*
+
 ### Response Time Comparison
 
 Response time analysis showed that the AI-driven approach reduced the average time from threat detection to rule implementation by 7.1 minutes (35.7 minutes for AI versus 42.8 minutes for manual), representing a 16.6% improvement. This faster response time is critical for limiting the impact of active attacks.
+
+![Figure 5: Performance Metrics Over Time](/home/ubuntu/ARPF-TI/research_paper/results/comparision3.png)
+
+*Figure 5. Trend analysis showing the consistent performance advantage of AI-generated rules throughout the evaluation period.*
 
 ## Discussion
 
