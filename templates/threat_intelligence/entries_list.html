@@ -59,7 +59,8 @@
                 class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">All Types</option>
                 {% for entry_type in entry_types %}
-                <option value="{{ entry_type }}" {% if entry_type_filter == entry_type %}selected{% endif %}>{{ entry_type }}</option>
+                <option value="{{ entry_type }}" {% if entry_type_filter==entry_type %}selected{% endif %}>{{ entry_type
+                    }}</option>
                 {% endfor %}
             </select>
 
@@ -67,16 +68,17 @@
                 class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">All Categories</option>
                 {% for category in categories %}
-                <option value="{{ category }}" {% if category_filter == category %}selected{% endif %}>{{ category }}</option>
+                <option value="{{ category }}" {% if category_filter==category %}selected{% endif %}>{{ category }}
+                </option>
                 {% endfor %}
             </select>
 
             <select name="min_confidence"
                 class="form-select text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <option value="">Any Confidence</option>
-                <option value="0.9" {% if min_confidence == '0.9' %}selected{% endif %}>High (90%+)</option>
-                <option value="0.7" {% if min_confidence == '0.7' %}selected{% endif %}>Medium (70%+)</option>
-                <option value="0.5" {% if min_confidence == '0.5' %}selected{% endif %}>Low (50%+)</option>
+                <option value="0.9" {% if min_confidence=='0.9' %}selected{% endif %}>High (90%+)</option>
+                <option value="0.7" {% if min_confidence=='0.7' %}selected{% endif %}>Medium (70%+)</option>
+                <option value="0.5" {% if min_confidence=='0.5' %}selected{% endif %}>Low (50%+)</option>
             </select>
 
             <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-md">
@@ -151,10 +153,9 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div class="w-24 bg-gray-200 rounded-full h-2.5">
-                            <div class="bg-blue-600 h-2.5 rounded-full"
-                                style="width: {{ entry.confidence_score|floatformat:" 0" }}%;"></div>
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ entry.confidence_score|floatformat:'0' }}%;"></div>
                         </div>
-                        <span class="text-xs ml-1">{{ entry.confidence_score|floatformat:"0" }}%</span>
+                        <span class="text-xs ml-1">{{ entry.confidence_score|floatformat:'0' }}%</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span class="px-2 py-1 text-xs font-semibold rounded-full 
@@ -163,8 +164,8 @@
                                 {% elif entry.category == 'blocked' %}bg-yellow-100 text-yellow-800
                                 {% elif entry.category == 'malicious' %}bg-purple-100 text-purple-800
                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ entry.category|default:"Unknown" }}
-                        </span>
+    {{ entry.category|default:"Unknown"|safe }}
+</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {{ entry.first_seen|date:"M d, Y" }}

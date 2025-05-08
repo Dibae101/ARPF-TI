@@ -30,28 +30,28 @@
             <a href="?tab=all"
                 class="inline-block py-2 px-4 border-b-2 {% if current_tab == 'all' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-600 hover:border-gray-300{% endif %}">
                 All Alerts
-                <span class="ml-1 bg-gray-100 text-gray-800 text-xs px-2 rounded-full">{{ alerts.count }}</span>
+                <span class="ml-1 bg-gray-100 text-gray-800 text-xs px-2 rounded-full">{{ all_count|default:"0" }}</span>
             </a>
         </li>
         <li class="mr-2">
             <a href="?tab=standard"
                 class="inline-block py-2 px-4 border-b-2 {% if current_tab == 'standard' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-600 hover:border-gray-300{% endif %}">
                 Standard Alerts
-                <span class="ml-1 bg-gray-100 text-gray-800 text-xs px-2 rounded-full">{{ standard_alerts_count }}</span>
+                <span class="ml-1 bg-gray-100 text-gray-800 text-xs px-2 rounded-full">{{ standard_count|default:"0" }}</span>
             </a>
         </li>
         <li class="mr-2">
             <a href="?tab=suggested"
                 class="inline-block py-2 px-4 border-b-2 {% if current_tab == 'suggested' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-600 hover:border-gray-300{% endif %}">
                 <i class="fas fa-lightbulb mr-1 text-yellow-400"></i> AI Suggestions
-                <span class="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 rounded-full">{{ suggested_alerts_count }}</span>
+                <span class="ml-1 bg-yellow-100 text-yellow-800 text-xs px-2 rounded-full">{{ suggested_count|default:"0" }}</span>
             </a>
         </li>
         <li class="mr-2">
             <a href="?tab=confirmed"
                 class="inline-block py-2 px-4 border-b-2 {% if current_tab == 'confirmed' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-600 hover:border-gray-300{% endif %}">
                 Confirmed & Sent
-                <span class="ml-1 bg-green-100 text-green-800 text-xs px-2 rounded-full">{{ confirmed_alerts_count }}</span>
+                <span class="ml-1 bg-green-100 text-green-800 text-xs px-2 rounded-full">{{ confirmed_count|default:"0" }}</span>
             </a>
         </li>
     </ul>

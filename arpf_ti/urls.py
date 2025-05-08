@@ -28,6 +28,7 @@ urlpatterns = [
     path('core/', include('core.urls')),
     path('alerts/', include('alerts.urls')),
     path('threat-intelligence/', include('threat_intelligence.urls')),
+    path('comparison/', include('comparison.urls')),  # Add the new comparison URLs
     
     # Authentication URLs
     path('accounts/login/', login_view, name='login'),

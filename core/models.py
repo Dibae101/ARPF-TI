@@ -22,6 +22,11 @@ class Rule(models.Model):
         ('alert', 'Alert')
     ]
     
+    SOURCE_TYPES = [
+        ('manual', 'Manually Created'),
+        ('ai', 'AI Generated')
+    ]
+    
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     rule_type = models.CharField(max_length=20, choices=RULE_TYPES)
@@ -32,11 +37,29 @@ class Rule(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Rule source and effectiveness metrics
+    source = models.CharField(max_length=10, choices=SOURCE_TYPES, default='manual', help_text="Source of the rule creation")
+    true_positive_count = models.IntegerField(default=0, help_text="Number of true positive matches")
+    false_positive_count = models.IntegerField(default=0, help_text="Number of false positive matches")
+    last_triggered = models.DateTimeField(null=True, blank=True, help_text="Last time this rule was triggered")
+    
     class Meta:
         ordering = ['priority', 'name']
     
     def __str__(self):
         return f"{self.name} ({self.get_rule_type_display()}: {self.pattern})"
+        
+    @property
+    def is_ai_generated(self):
+        return 'AI' in self.name or self.source == 'ai'
+        
+    @property
+    def precision(self):
+        """Calculate precision (percentage of correct blocks)"""
+        total = self.true_positive_count + self.false_positive_count
+        if total == 0:
+            return 0
+        return (self.true_positive_count / total) * 100
 
 
 class RequestLog(models.Model):

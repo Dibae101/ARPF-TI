@@ -272,26 +272,8 @@ class RequestLoggerMiddleware(MiddlewareMixin):
     
     def _create_log_entry(self, request, ip_address, matched_rule, action_taken, start_time, response=None):
         """Create a log entry for the request."""
-        # Explicit check for the problematic IP
-        if ip_address == '64.130.127.37':
-            logger.info(f"Explicitly blocking log entry for IP: {ip_address}")
-            return None
-            
-        # Skip logging for excluded IPs
-        if hasattr(request, '_excluded_from_logging') and request._excluded_from_logging:
-            logger.debug(f"Skipping log entry creation for excluded IP: {ip_address}")
-            return None
-            
-        headers = {}
-        for key, value in request.META.items():
-            if key.startswith('HTTP_'):
-                header_name = key[5:].replace('_', '-').title()
-                headers[header_name] = value
-        
-        # Calculate response time in milliseconds
         response_time = int((time.time() - start_time) * 1000)
-        
-        # Get response code, default to 0 if no response
+        headers = {k: v for k, v in request.META.items() if k.startswith('HTTP_')}
         response_code = getattr(response, 'status_code', 0) if response else 0
         
         country_code = self._get_country_code(ip_address)
@@ -307,7 +289,8 @@ class RequestLoggerMiddleware(MiddlewareMixin):
             was_blocked=(action_taken == 'block'),
             response_code=response_code,
             response_time_ms=response_time,
-            country=country_code
+            country=country_code,
+            extra_data={}  # Initialize with empty dict
         )
         log_entry.save()
         

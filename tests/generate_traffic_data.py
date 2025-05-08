@@ -5,6 +5,9 @@ import django
 import random
 from datetime import timedelta
 
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'arpf_ti.settings')
 django.setup()

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'dashboard',
     'alerts',
     'threat_intelligence',
+    'comparison',  # Add the new comparison app
 ]
 
 MIDDLEWARE = [

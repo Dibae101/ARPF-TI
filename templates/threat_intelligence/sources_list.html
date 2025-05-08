@@ -110,7 +110,7 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ source.last_updated|default:"Never" }}
+                        {{ source.last_updated|default:"Never updated"|safe }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {{ source.entries.count }}

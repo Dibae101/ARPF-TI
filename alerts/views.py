@@ -42,16 +42,18 @@ def alert_list(request):
         alerts = alerts.filter(alert_type=type_filter)
     
     # Fetch counts for each category for the badges
-    suggested_alerts_count = Alert.objects.filter(alert_status='suggested').count()
-    confirmed_alerts_count = Alert.objects.filter(alert_status='confirmed').count()
-    standard_alerts_count = Alert.objects.filter(alert_status='standard').count()
+    all_count = Alert.objects.all().count()
+    suggested_count = Alert.objects.filter(alert_status='suggested').count()
+    confirmed_count = Alert.objects.filter(alert_status='confirmed').count()
+    standard_count = Alert.objects.filter(alert_status='standard').count()
     
     context = {
         'alerts': alerts,
         'current_tab': current_tab,
-        'suggested_alerts_count': suggested_alerts_count,
-        'confirmed_alerts_count': confirmed_alerts_count,
-        'standard_alerts_count': standard_alerts_count,
+        'all_count': all_count,
+        'suggested_count': suggested_count,
+        'confirmed_count': confirmed_count,
+        'standard_count': standard_count,
         'severity_filter': severity_filter,
         'acknowledged_filter': acknowledged_filter,
         'type_filter': type_filter,

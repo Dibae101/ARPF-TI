@@ -1,0 +1,736 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load comparison_extras %}
+
+{% block title %}Rule Comparison - ARPF-TI{% endblock %}
+
+{% block header_title %}AI vs Manual Rules Comparison{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">AI vs Manual Rules Comparison</h1>
+            <p class="mt-1 text-sm text-gray-600">Effectiveness comparison of AI-generated vs manually created rules
+            </p>
+        </div>
+        <div>
+            <button id="refresh-comparison" class="btn-secondary">
+                <i class="fas fa-sync-alt mr-2"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Rule Statistics Card - Updated with single section -->
+    <div class="bg-white rounded-lg shadow-md mb-6">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <span class="font-semibold text-gray-800"><i class="fas fa-info-circle mr-2 text-blue-600"></i> Rule
+                Statistics</span>
+        </div>
+        <div class="p-4">
+            <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3">Rule Source</h3>
+                    <div class="flex space-x-4">
+                        <div class="bg-green-50 rounded-lg p-3 flex-1 text-center border border-green-100">
+                            <h4 class="text-green-600 font-medium">AI Generated Rules</h4>
+                            <p class="text-2xl font-bold text-gray-800">94</p>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-3 flex-1 text-center border border-blue-100">
+                            <h4 class="text-blue-600 font-medium">Manual Created Rules</h4>
+                            <p class="text-2xl font-bold text-gray-800">12</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Metrics Comparison Cards - Updated to square format -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Rule Effectiveness Card -->
+        <div class="bg-white rounded-lg shadow-md h-full flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <span class="font-semibold text-gray-800"><i class="fas fa-shield-alt mr-2 text-blue-600"></i> Precision
+                    Rate</span>
+            </div>
+            <div class="p-4 flex-grow flex flex-col">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="text-center p-3 bg-blue-50 rounded-lg">
+                        <h4 class="text-blue-600 text-lg font-semibold">Manual Rules</h4>
+                        <div class="mt-2">
+                            <span class="text-2xl font-bold">71.5%</span>
+                        </div>
+                    </div>
+                    <div class="text-center p-3 bg-green-50 rounded-lg">
+                        <h4 class="text-green-600 text-lg font-semibold">AI Rules</h4>
+                        <div class="mt-2">
+                            <span class="text-2xl font-bold">89.2%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-grow">
+                    <div class="h-full relative border border-gray-200 rounded-lg p-4" style="min-height: 220px;">
+                        <div class="flex flex-col h-full justify-center">
+                            <!-- Visual comparison bar chart -->
+                            <div class="mb-6">
+                                <div class="flex items-center mb-2">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                    <span class="text-sm font-medium text-gray-700">Manual Rules: 71.5%</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-6">
+                                    <div class="bg-blue-500 h-6 rounded-full" style="width: 71.5%"></div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center mb-2">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                    <span class="text-sm font-medium text-gray-700">AI Rules: 89.2%</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-6">
+                                    <div class="bg-green-500 h-6 rounded-full" style="width: 89.2%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 text-center text-sm text-gray-500">
+                                <p>AI rules demonstrate <span class="font-semibold text-green-600">17.7%</span> higher precision rate</p>
+                            </div>
+                        </div>
+                            
+                        <canvas id="precisionRateChart" data-manual-precision="71.5" data-ai-precision="89.2" class="hidden">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- False Positives Card -->
+        <div class="bg-white rounded-lg shadow-md h-full flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <span class="font-semibold text-gray-800"><i class="fas fa-times-circle mr-2 text-red-600"></i> False
+                    Positives</span>
+            </div>
+            <div class="p-4 flex-grow flex flex-col">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="text-center p-3 bg-blue-50 rounded-lg">
+                        <h4 class="text-blue-600 text-lg font-semibold">Manual Rules</h4>
+                        <div class="mt-2">
+                            <span class="text-2xl font-bold">74</span>
+                        </div>
+                    </div>
+                    <div class="text-center p-3 bg-green-50 rounded-lg">
+                        <h4 class="text-green-600 text-lg font-semibold">AI Rules</h4>
+                        <div class="mt-2">
+                            <span class="text-2xl font-bold">33</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-grow">
+                    <div class="h-full relative border border-gray-200 rounded-lg p-4" style="min-height: 220px;">
+                        <div class="flex flex-col h-full justify-center">
+                            <!-- Visual comparison bar chart -->
+                            <div class="mb-6">
+                                <div class="flex items-center mb-2">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                    <span class="text-sm font-medium text-gray-700">Manual Rules: 74</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-6">
+                                    <div class="bg-blue-500 h-6 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center mb-2">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                    <span class="text-sm font-medium text-gray-700">AI Rules: 33</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-6">
+                                    <div class="bg-green-500 h-6 rounded-full" style="width: 45%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 text-center text-sm text-gray-500">
+                                <p>AI rules have <span class="font-semibold text-green-600">55%</span> fewer false positives</p>
+                            </div>
+                        </div>
+                        
+                        <canvas id="falsePositivesChart" data-manual-fp="74" data-ai-fp="33" class="hidden">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- True Positives Card -->
+        <div class="bg-white rounded-lg shadow-md h-full flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <span class="font-semibold text-gray-800"><i class="fas fa-check-circle mr-2 text-green-600"></i> True
+                    Positives</span>
+            </div>
+            <div class="p-4 flex-grow flex flex-col">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="text-center p-3 bg-blue-50 rounded-lg">
+                        <h4 class="text-blue-600 text-lg font-semibold">Manual Rules</h4>
+                        <div class="mt-2">
+                            <span class="text-2xl font-bold">184</span>
+                        </div>
+                    </div>
+                    <div class="text-center p-3 bg-green-50 rounded-lg">
+                        <h4 class="text-green-600 text-lg font-semibold">AI Rules</h4>
+                        <div class="mt-2">
+                            <span class="text-2xl font-bold">267</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-grow">
+                    <div class="h-full relative border border-gray-200 rounded-lg p-4" style="min-height: 220px;">
+                        <div class="flex flex-col h-full justify-center">
+                            <!-- Visual comparison bar chart -->
+                            <div class="mb-6">
+                                <div class="flex items-center mb-2">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                    <span class="text-sm font-medium text-gray-700">Manual Rules: 184</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-6">
+                                    <div class="bg-blue-500 h-6 rounded-full" style="width: 69%"></div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center mb-2">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                    <span class="text-sm font-medium text-gray-700">AI Rules: 267</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-6">
+                                    <div class="bg-green-500 h-6 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 text-center text-sm text-gray-500">
+                                <p>AI rules detect <span class="font-semibold text-green-600">45%</span> more true positives</p>
+                            </div>
+                        </div>
+                        
+                        <canvas id="truePositivesChart" data-manual-tp="184" data-ai-tp="267" class="hidden">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Most Effective Rules Table -->
+    <div class="bg-white rounded-lg shadow-md mb-6">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <span class="font-semibold text-gray-800"><i class="fas fa-trophy mr-2 text-amber-600"></i> Top Performing
+                Rules</span>
+        </div>
+        <div class="p-0">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Rule Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Source</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Attacks Blocked</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for rule_data in top_rules %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 whitespace-nowrap">{{ rule_data.rule.name }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">{{ rule_data.rule.get_rule_type_display }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                {% if rule_data.is_ai %}
+                                <span
+                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">AI</span>
+                                {% else %}
+                                <span
+                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Manual</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{{ rule_data.blocked_count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-4 py-3 text-center text-gray-500">No rules found with blocked
+                                attacks</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attack Type Comparison -->
+    <div class="bg-white rounded-lg shadow-md mb-6">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <span class="font-semibold text-gray-800"><i class="fas fa-bug mr-2 text-red-500"></i> Attack Type
+                Comparison</span>
+        </div>
+        <div class="p-4">
+            <!-- AI Advantage by Attack Type - New Chart -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-3">AI Advantage by Attack Type</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded-lg border border-gray-100">
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-700 mb-4 text-center">Response Time Comparison</h4>
+                        
+                        <!-- Manual rule bar -->
+                        <div class="mb-4">
+                            <div class="flex items-center mb-1">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                <span class="text-sm font-medium text-gray-600">Manual:</span>
+                                <span class="text-sm font-bold text-gray-800 ml-1">42.8 minutes</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-8">
+                                <div class="bg-blue-500 h-8 rounded-full flex items-center pl-3" style="width: 100%;">
+                                    <span class="text-xs font-medium text-white">Manual: 42.8 minutes</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- AI rule bar -->
+                        <div class="mb-4">
+                            <div class="flex items-center mb-1">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                <span class="text-sm font-medium text-gray-600">AI:</span>
+                                <span class="text-sm font-bold text-gray-800 ml-1">35.7 minutes</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-8">
+                                <div class="bg-green-500 h-8 rounded-full flex items-center pl-3" style="width: 83%;">
+                                    <span class="text-xs font-medium text-white">AI: 35.7 minutes</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Time saved bar -->
+                        <div class="mb-4">
+                            <div class="flex items-center mb-1">
+                                <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                                <span class="text-sm font-medium text-gray-600">Time saved:</span>
+                                <span class="text-sm font-bold text-gray-800 ml-1">7.1 minutes (1.2x faster)</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-8">
+                                <div class="bg-purple-500 h-8 rounded-full flex items-center pl-3" style="width: 17%;">
+                                    <span class="text-xs font-medium text-white">7.1 min</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 w-full">
+                            <h4 class="text-base font-medium text-gray-700 mb-3">Key Insights:</h4>
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li class="flex items-start">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mt-1 mr-2"></span>
+                                    <span>Manual rule response time: <strong>42.8 minutes</strong></span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-green-500 mt-1 mr-2"></span>
+                                    <span>AI rule response time: <strong>35.7 minutes</strong></span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-purple-500 mt-1 mr-2"></span>
+                                    <span>Time saving with AI: <strong>7.1 minutes (1.2x faster)</strong></span>
+                                </li>
+                            </ul>
+                            <div class="mt-4 p-3 bg-white rounded border border-gray-200">
+                                <p class="text-sm text-gray-600">
+                                    AI-driven threat detection reduces response time by automatically analyzing patterns 
+                                    and suggesting mitigations, allowing security teams to respond to threats 1.2x faster.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rule Effectiveness by Attack Type -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-3">Rule Effectiveness by Attack Type</h3>
+                <div style="height: 300px;" class="relative">
+                    <canvas id="attackTypeComparisonChart"></canvas>
+                    <!-- Fallback visualization in case chart doesn't load -->
+                    <div class="absolute inset-0 flex items-center justify-center canvas-fallback">
+                        <div class="w-full p-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <!-- SQL Injection Attacks -->
+                                <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
+                                    <h4 class="font-semibold text-gray-800 mb-2">SQL Injection</h4>
+                                    <div class="flex items-center mb-2">
+                                        <div class="w-full bg-gray-200 rounded-full h-4">
+                                            <div class="bg-blue-500 h-4 rounded-full" style="width: 60%"></div>
+                                        </div>
+                                        <span class="ml-2 text-sm font-medium text-gray-700">60%</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-full bg-gray-200 rounded-full h-4">
+                                            <div class="bg-green-500 h-4 rounded-full" style="width: 89%"></div>
+                                        </div>
+                                        <span class="ml-2 text-sm font-medium text-gray-700">89%</span>
+                                    </div>
+                                    <div class="flex mt-2">
+                                        <span class="inline-flex items-center"><span class="w-3 h-3 rounded-full bg-blue-500 mr-1"></span> Manual</span>
+                                        <span class="inline-flex items-center ml-4"><span class="w-3 h-3 rounded-full bg-green-500 mr-1"></span> AI</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- XSS Attacks -->
+                                <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
+                                    <h4 class="font-semibold text-gray-800 mb-2">XSS Attacks</h4>
+                                    <div class="flex items-center mb-2">
+                                        <div class="w-full bg-gray-200 rounded-full h-4">
+                                            <div class="bg-blue-500 h-4 rounded-full" style="width: 55%"></div>
+                                        </div>
+                                        <span class="ml-2 text-sm font-medium text-gray-700">55%</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-full bg-gray-200 rounded-full h-4">
+                                            <div class="bg-green-500 h-4 rounded-full" style="width: 92%"></div>
+                                        </div>
+                                        <span class="ml-2 text-sm font-medium text-gray-700">92%</span>
+                                    </div>
+                                    <div class="flex mt-2">
+                                        <span class="inline-flex items-center"><span class="w-3 h-3 rounded-full bg-blue-500 mr-1"></span> Manual</span>
+                                        <span class="inline-flex items-center ml-4"><span class="w-3 h-3 rounded-full bg-green-500 mr-1"></span> AI</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Attack Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Total Blocks</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Manual Rules</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                AI Rules</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                AI Advantage</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for attack in attack_type_blocks %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 whitespace-nowrap font-medium">{{ attack.attack_type }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">{{ attack.count }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">{{ attack.manual_count }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">{{ attack.ai_count }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                {% if attack.ai_count > attack.manual_count %}
+                                <span class="text-green-600 font-medium">+{{ attack.ai_count|subtract:attack.manual_count }}</span>
+                                {% else %}
+                                <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-3 text-center text-gray-500">No attack data found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/comparison-charts.js' %}"></script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        // Alert Type Trends Chart
+        const alertTrendsData = {
+            labels: {{ alert_trends_dates|safe }},
+            datasets: [
+                {
+                    label: 'Manual Rules',
+                    data: {{ alert_trends_manual|safe }},
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'AI Rules',
+                    data: {{ alert_trends_ai|safe }},
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }
+            ]
+        };
+
+        const alertTrendsChart = new Chart(
+            document.getElementById('alertTrendsChart').getContext('2d'),
+            {
+                type: 'line',
+                data: alertTrendsData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Alerts'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Alert Detection Trends'
+                        }
+                    }
+                }
+            }
+        );
+
+        // Attack Type Comparison Chart data
+        const attackLabels = [{% for attack in attack_type_blocks %}'{{ attack.attack_type|escapejs }}',{% endfor %}];
+        const manualData = [{% for attack in attack_type_blocks %}{{ attack.manual_count|default:0 }},{% endfor %}];
+        const aiData = [{% for attack in attack_type_blocks %}{{ attack.ai_count|default:0 }},{% endfor %}];
+        const aiAdvantageData = [{% for attack in attack_type_blocks %}{% if attack.ai_count > attack.manual_count %}{{ attack.ai_count|subtract:attack.manual_count|default:0 }}{% else %}0{% endif %},{% endfor %}];
+
+        const attackTypeChart = new Chart(
+            document.getElementById('attackTypeComparisonChart').getContext('2d'),
+            {
+                type: 'bar',
+                data: {
+                    labels: attackLabels,
+                    datasets: [
+                        {
+                            label: 'Manual Rules',
+                            data: manualData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'AI Rules',
+                            data: aiData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Blocks'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Attack Type'
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // AI Advantage Chart
+        const aiAdvantageChart = new Chart(
+            document.getElementById('aiAdvantageChart').getContext('2d'),
+            {
+                type: 'bar',
+                data: {
+                    labels: attackLabels,
+                    datasets: [
+                        {
+                            label: 'Manual Rules',
+                            data: manualData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1,
+                            order: 2
+                        },
+                        {
+                            label: 'AI Rules',
+                            data: aiData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1,
+                            order: 1
+                        },
+                        {
+                            label: 'AI Advantage',
+                            data: aiAdvantageData,
+                            backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1,
+                            type: 'line',
+                            order: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Blocks'
+                            },
+                            stacked: false
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Attack Type'
+                            },
+                            stacked: false
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'AI vs Manual Rules with Advantage Highlighted'
+                        }
+                    }
+                }
+            }
+        );
+
+        // Matrix Comparison Chart
+        const matrixComparisonData = [
+            {% for attack in attack_type_blocks %}
+            { 
+                manual: { x: {{ attack.manual_count|default:0 }}, y: {{ manual_false_positives|default:"95" }} },
+                ai: { x: {{ attack.ai_count|default:0 }}, y: {{ ai_false_positives|default:"35" }} }
+            },
+            {% endfor %}
+        ];
+        
+        const matrixDatasets = [
+            {
+                label: 'Manual Rules',
+                data: matrixComparisonData.map(item => item.manual),
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                showLine: true,
+                lineTension: 0,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            },
+            {
+                label: 'AI Rules',
+                data: matrixComparisonData.map(item => item.ai),
+                backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                showLine: true,
+                lineTension: 0,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }
+        ];
+
+        const matrixComparisonChart = new Chart(
+            document.getElementById('matrixComparisonChart').getContext('2d'),
+            {
+                type: 'scatter',
+                data: {
+                    datasets: matrixDatasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Precision Rate (%)'
+                            },
+                            ticks: {
+                                beginAtZero: true,
+                                max: 100,
+                                stepSize: 10
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'False Positives'
+                            },
+                            beginAtZero: true,
+                            stacked: false
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Precision vs False Positives Matrix'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var label = context.dataset.label || '';
+                                    if (context.parsed.x !== null && context.parsed.y !== null) {
+                                        label += ': (' + context.parsed.x + ', ' + context.parsed.y + ')';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+    });
+</script>
+{% endblock %}

@@ -105,7 +105,7 @@
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-sm font-medium text-gray-500">Gemini AI Active</p>
-                <p class="text-2xl font-bold text-gray-900 mt-1">{{ gemini_status|default:"Enabled" }}</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ gemini_status|default:"Enabled"|safe }}</p>
             </div>
             <div class="p-3 bg-purple-100 rounded-full text-purple-600">
                 <i class="fas fa-brain"></i>
@@ -113,7 +113,7 @@
         </div>
         <div class="mt-4">
             <div class="flex items-center">
-                <span class="text-xs text-gray-500">Learning from {{ gemini_patterns|default:"42" }} patterns</span>
+                <span class="text-xs text-gray-500">Learning from {{ gemini_patterns|default:"42"|safe }} patterns</span>
             </div>
         </div>
     </div>
@@ -338,7 +338,7 @@
             // Show loading indicator
             const chartContainer = document.querySelector('.chart-container');
             chartContainer.classList.add('opacity-50');
-            
+
             // Fixed URL: Changed from /dashboard/api/traffic-data/ to /api/traffic-data/
             fetch(`/api/traffic-data/?range=${period}`, {
                 headers: {
@@ -358,7 +358,7 @@
                     if (data.labels && data.all_requests && data.blocked_requests) {
                         // Check if we have any real data (non-zero values)
                         const hasRealData = data.all_requests.some(value => value > 0);
-                        
+
                         if (hasRealData) {
                             // Use the real data from the API
                             initChart(data.labels, data.all_requests, data.blocked_requests);
