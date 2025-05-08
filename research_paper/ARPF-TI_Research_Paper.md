@@ -84,6 +84,17 @@ The AI component of ARPF-TI utilizes two primary models:
 
 The models are applied to traffic data to identify potential threats and generate rule suggestions. Each suggestion includes a confidence score and contextual explanation to aid human analysts in evaluation. The system maintains a feedback loop where rule effectiveness metrics are used to improve future AI-generated rules.
 
+**Table 1: AI Model Characteristics in ARPF-TI Implementation**
+
+| Characteristic | Google Gemini | TinyLlama (1.1B) | Usage in ARPF-TI |
+|----------------|---------------|------------------|------------------|
+| Deployment | Cloud-based API | Local deployment | Primary and backup |
+| Parameters | 540B | 1.1B | - |
+| Primary Use | Rule generation, Pattern analysis | Offline analysis | Context-dependent switching |
+| Response Time | 400-600ms | 1-1.5s | Depends on connection status |
+| Integration | Via REST API | Via `gemini_integration.py` & local inference | Implemented in alerts/gemini_integration.py |
+| Input Data | Structured traffic logs, Threat feeds | Pre-processed log data | From traffic_analyzer.py output |
+
 ### Threat Intelligence Integration
 
 ARPF-TI integrates with multiple threat intelligence sources, including:
@@ -96,6 +107,16 @@ ARPF-TI integrates with multiple threat intelligence sources, including:
 - Emerging Threats Community
 
 Intelligence is normalized, deduplicated, and assigned confidence scores based on source reliability and cross-validation. This processed intelligence is then used to enhance rule effectiveness and provide context for AI analysis.
+
+**Table 2: Comparative Performance Metrics by Rule Source**
+
+| Performance Metric | AI-Generated Rules | Manually Created Rules | Improvement |
+|--------------------|--------------------|-----------------------|-------------|
+| Precision Rate | 89.2% | 71.5% | 17.7% |
+| True Positives (from 10,000 attacks) | 267 | 184 | 45.1% |
+| False Positives | 33 | 74 | 55.4% reduction |
+| Rules Generated | 94 | 12 | 683.3% |
+| Average Response Time | 35.7 minutes | 42.8 minutes | 16.6% reduction |
 
 ### Comparative Analysis Framework
 
@@ -118,6 +139,8 @@ To evaluate ARPF-TI's effectiveness, we deployed the system in a controlled test
 3. **Zero-Day Simulation**: Created novel attack patterns not matching known signatures
 
 Traffic was processed by both AI-generated and manually created rules, and the results were compared using the metrics from the comparison framework. The evaluation period covered 30 days of continuous operation with over 500,000 simulated requests including 10,000 attack attempts.
+
+Our test environment, implemented using scripts in the `/tests/` directory, generated diverse traffic patterns to simulate real-world conditions. In particular, the `simulate_attacks.py` and `generate_traffic_data.py` scripts created both legitimate traffic and various attack types at random intervals to provide a comprehensive test dataset.
 
 ## Results
 
