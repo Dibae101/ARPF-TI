@@ -118,7 +118,7 @@ Connect to multiple threat intelligence sources:
 - PhishTank
 - Custom API integrations
 
-![Adding Threat Intelligence Source](/research_paper/images/threat-intelligence-add-source.png)
+![Adding Threat Intelligence Source](/research_paper/images/dashboard.png)
 
 ## Documentation
 
