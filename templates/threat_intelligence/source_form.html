@@ -211,13 +211,15 @@
                             {% if source %}
                             <div>
                                 <div class="flex items-center h-5 mt-6">
-                                    <input type="checkbox" name="is_active" id="is_active" {% if form.is_active.value %}checked{% endif %}
+                                    <input type="checkbox" name="is_active" id="is_active" 
+                                        {% if form.is_active.value %}checked{% endif %}
                                         class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                     <label for="is_active" class="ml-2 block text-sm text-gray-700">
                                         Active
                                     </label>
                                 </div>
-                                <p class="mt-1 text-xs text-gray-500">Inactive sources will not be automatically updated</p>
+                                <p class="mt-1 text-xs text-gray-500">Inactive sources will not be automatically updated
+                                </p>
                             </div>
                             {% endif %}
                         </div>

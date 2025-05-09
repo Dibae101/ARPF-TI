@@ -120,6 +120,8 @@ background-opacity: 0.05
 - AI system generated **94 rules** vs. 12 manual rules
 - AI rules identified more subtle patterns
 - Generated more specific rules for various attack vectors
+- Successfully blocked **1,842** attack attempts
+- AI detection advantage: **83** more attacks identified than manual methods
 
 ---
 
